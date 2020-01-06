@@ -28,8 +28,6 @@ module "s1-edge-extenstion" {
     vm_hostname         = "s1-edge"
     extension_name      = "InstallQuagga"
     resource_group_name = azurerm_resource_group.routing-lab-rg.name
-    command_to_execute  = "./install-route.sh"
-    file_uris           = ["https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/install-router.sh","https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-router.yml","https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-inventory.yml"]
 }
 
 # Create VMs in s2
