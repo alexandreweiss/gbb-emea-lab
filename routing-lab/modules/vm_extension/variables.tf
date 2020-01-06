@@ -39,11 +39,18 @@ variable "file_uris" {
 variable "settings" {
   type = string
   default = <<SETTINGS
-    "commandToExecute": "./sudo install-route.sh",
-    "fileUris": [
-      "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/install-router.sh",
-      "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-router.yml",
-      "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-inventory.yml"
-    ]
-    SETTINGS
+    {
+      "commandToExecute": "./sudo install-route.sh",
+      "fileUris": [
+        "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/install-router.sh",
+        "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-router.yml",
+        "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-inventory.yml"
+      ]
+    }
+  SETTINGS
+}
+
+variable "nb_instances" {
+  description = "Specify the number of extension instances. Should match number of VMs"
+  default     = "1"
 }
