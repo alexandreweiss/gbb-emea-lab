@@ -1,0 +1,32 @@
+variable "extension_name" { 
+    type        = string
+    description = "name of the extension to install"
+}
+
+variable "command_to_execute" { 
+    type        = string
+    description = "command to execute in the OS"
+}
+
+variable "tags" {
+  type        = map
+  description = "A map of the tags to use on the resources that are deployed with this module."
+
+  default = {
+    source = "gbb-emea-lab"
+  }
+}
+
+variable "resource_group_name" {
+   description =   "Name of the resource group to deploy the vNet to"
+}
+
+variable "location" { 
+    description = "Physical location where resource are deployed"
+    default = "francecentral"
+}
+
+variable "file_uris" { 
+  type = list(string)
+  description = "List of files to be downloaded by the extension"
+}

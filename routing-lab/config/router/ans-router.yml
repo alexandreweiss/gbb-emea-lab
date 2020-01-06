@@ -1,0 +1,9 @@
+---
+- hosts: local
+
+  tasks:
+
+    - name: install the latest version of guaqqa ...
+      package:
+        name: quagga
+        state: latest

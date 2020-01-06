@@ -25,5 +25,10 @@ variable "short_location" {
 
 variable "public_ip_allocation_method" {
     description = "How public IP gets allocated. Can be either Dynamic or Static"
-    default =   "Dynamic"
+    default =   "Static"
+}
+
+variable "sku" {
+    description = "Sku of the public IP. Can be either Basic or Standard"
+    default =   "Standard"
 }

@@ -46,7 +46,7 @@ variable "next_hop_in_ip_address" {
     description = "Next hop for routes"
 }
  
-variable "subnet_id" {   
+variable "subnet_ids" {   
    type = list(string)
    description = "Id of the subnet to associate to rtable"
    default = []

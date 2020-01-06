@@ -115,6 +115,17 @@ variable "nb_public_ip" {
   default     = "1"
 }
 
+
+variable "public_ip_sku" {
+    description = "Sku of the public IP. Can be either Basic or Standard"
+    default =   "Standard"
+}
+
+variable "public_ip_allocation_method" {
+    description = "How public IP gets allocated. Can be either Dynamic or Static"
+    default =   "Static"
+}
+
 variable "delete_os_disk_on_termination" {
   description = "Delete datadisk when machine is terminated"
   default     = "false"

@@ -2,7 +2,7 @@
 # Test VM
 module "s1-vm" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s1-vm"
     public_ip_name      = "bgp-s1-vm"
@@ -13,7 +13,7 @@ module "s1-vm" {
 # s1 edge router
 module "s1-edge" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s1-edge"
     public_ip_name      = "bgp-s1-edge"
@@ -21,11 +21,22 @@ module "s1-edge" {
     resource_group_name = azurerm_resource_group.routing-lab-rg.name
 }
 
+module "s1-edge-extenstion" {
+    source              = "./modules/vm_extension"
+
+    location            = var.location
+    vm_hostname         = "s1-edge"
+    extension_name      = "InstallQuagga"
+    resource_group_name = azurerm_resource_group.routing-lab-rg.name
+    command_to_execute  = "./install-route.sh"
+    file_uris           = ["https://"]
+}
+
 # Create VMs in s2
 # Test VM
 module "s2-vm" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s2-vm"
     public_ip_name      = "bgp-s2-vm"
@@ -36,7 +47,7 @@ module "s2-vm" {
 # s2 edge router
 module "s2-edge" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s2-edge"
     public_ip_name      = "bgp-s2-edge"
@@ -48,7 +59,7 @@ module "s2-edge" {
 # First router
 module "s1-interco-1" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s1-interco-1"
     public_ip_name      = "bgp-s1-interco-1"
@@ -59,7 +70,7 @@ module "s1-interco-1" {
 # Second router
 module "s1-interco-2" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s1-interco-2"
     public_ip_name      = "bgp-s1-interco-2"
@@ -71,7 +82,7 @@ module "s1-interco-2" {
 # First router
 module "s2-interco-1" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s2-interco-1"
     public_ip_name      = "bgp-s2-interco-1"
@@ -82,7 +93,7 @@ module "s2-interco-1" {
 # Second router
 module "s2-interco-2" {
     source              = "./modules/vm"
-    location            = "France Central"
+    location            = var.location
     vm_os_simple        = "UbuntuServer"
     vm_hostname         = "s2-interco-2"
     public_ip_name      = "bgp-s2-interco-2"

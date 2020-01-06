@@ -14,7 +14,24 @@ module "vnet-s1-core" {
    resource_group_name  = azurerm_resource_group.routing-lab-rg.name
    subnet_names         = ["default"]
    subnet_prefixes      = ["10.0.0.0/27"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}"]
+   route_table_ids      = ["${module.s1-route-table.id}"]
    location             = var.location
+}
+
+# Route Table to s1 edge
+
+module "s1-route-table" {
+   source = "./modules/route_table/"
+
+   route_table_name        = "s1-core-rt"
+   route_name              = ["toEdgeRouter"]
+   route_prefix            = ["192.168.0.0/24"]
+   next_hop_type           = ["VirtualAppliance"]
+   next_hop_in_ip_address  = ["${module.s1-edge.ip_address}"]
+   subnet_ids              = ["${module.vnet-s1-core.subnet_ids[0]}"]   
+   location                = var.location
+   resource_group_name     = azurerm_resource_group.routing-lab-rg.name
 }
 
 # Edge - Create virtual network
@@ -26,6 +43,7 @@ module "vnet-s1-edge" {
    resource_group_name  = azurerm_resource_group.routing-lab-rg.name
    subnet_names         = ["default"]
    subnet_prefixes      = ["10.0.1.0/27"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}"]
    location             = var.location
 }
 
@@ -54,6 +72,7 @@ module "vnet-interco" {
    resource_group_name  = azurerm_resource_group.routing-lab-rg.name
    subnet_names         = ["default"]
    subnet_prefixes      = ["172.16.0.0/27"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}"]
    location             = var.location
 }
 
@@ -73,21 +92,6 @@ resource "azurerm_virtual_network_peering" "interco-to-s1-edge" {
    remote_virtual_network_id  = module.vnet-s1-edge.id
 }
 
-# Route Table to s1 edge
-
-module "s1-route-table" {
-   source = "./modules/route_table/"
-
-   route_table_name        = "s1-core-rt"
-   route_name              = ["toEdgeRouter"]
-   route_prefix            = ["192.168.0.0/24"]
-   next_hop_type           = ["VirtualAppliance"]
-   next_hop_in_ip_address  = ["${module.s1-edge.ip_address}"]
-   subnet_id               = ["${module.vnet-s1-core.subnet_ids[0]}"]   
-   location                = var.location
-   resource_group_name     = azurerm_resource_group.routing-lab-rg.name
-}
-
 ## END of site 1
 
 ## START of site 2
@@ -100,7 +104,24 @@ vnet_name               = "routing-s2-core-vn"
    resource_group_name  = azurerm_resource_group.routing-lab-rg.name
    subnet_names         = ["default"]
    subnet_prefixes      = ["192.168.0.0/27"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}"]
+   route_table_ids      = ["${module.s2-route-table.id}"]
    location             = var.location
+}
+
+# Route Table to s2 edge
+
+module "s2-route-table" {
+   source                  = "./modules/route_table/"
+
+   route_table_name        = "s2-core-rt"
+   route_name              = ["toEdgeRouter"]
+   route_prefix            = ["10.0.0.0/24"]
+   next_hop_type           = ["VirtualAppliance"]
+   next_hop_in_ip_address  = ["${module.s2-edge.ip_address}"]
+   subnet_ids              = ["${module.vnet-s2-core.subnet_ids[0]}"]
+   location                = var.location
+   resource_group_name  = azurerm_resource_group.routing-lab-rg.name
 }
 
 # Edge - Create virtual network
@@ -112,6 +133,7 @@ module "vnet-s2-edge" {
    resource_group_name  = azurerm_resource_group.routing-lab-rg.name
    subnet_names         = ["default"]
    subnet_prefixes      = ["192.168.1.0/27"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}"]
    location             = var.location
 }
 
@@ -147,20 +169,41 @@ resource "azurerm_virtual_network_peering" "interco-to-s2-edge" {
    remote_virtual_network_id  = module.vnet-s2-edge.id
 }
 
-# Route Table to s2 edge
-
-module "s2-route-table" {
-   source                  = "./modules/route_table/"
-
-   route_table_name        = "s2-core-rt"
-   route_name              = ["toEdgeRouter"]
-   route_prefix            = ["10.0.0.0/24"]
-   next_hop_type           = ["VirtualAppliance"]
-   next_hop_in_ip_address  = ["${module.s2-edge.ip_address}"]
-   subnet_id               = ["${module.vnet-s2-core.subnet_ids[0]}"]   
-   location                = var.location
-   resource_group_name     = azurerm_resource_group.routing-lab-rg.name
-}
 ## END of site 2
 
+## Common configuration
 
+module "route-table-association" {
+   source = "./modules/route_table_association"
+
+   subnet_ids           = ["${module.vnet-s1-core.subnet_ids[0]}","${module.vnet-s2-core.subnet_ids[0]}"]
+   route_table_ids      = ["${module.s1-route-table.id}","${module.s2-route-table.id}"]
+}
+
+module "nsg-all-subnets" {
+   source                     = "./modules/nsg"
+
+   resource_group_name        = azurerm_resource_group.routing-lab-rg.name
+   location                   = var.location
+   security_group_name        = "nsg-all"
+   rules                      = [
+      {
+         name                   = "ssh"
+         priority               = "100"
+         direction              = "Inbound"
+         access                 = "Allow"
+         protocol               = "tcp"
+         destination_port_range = "22"
+         description            = "Allow SSH access from outside"
+      }
+   ]
+}
+#    subnet_ids                 = ["${module.vnet-s1-core.subnet_ids[0]}","${module.vnet-s1-edge.subnet_ids[0]}","${module.vnet-s2-core.subnet_ids[0]}","${module.vnet-s2-edge.subnet_ids[0]}","${module.vnet-interco.subnet_ids[0]}"]
+# }
+
+module "ngs-association" {
+   source = "./modules/nsg_association"
+
+   subnet_ids                 = ["${module.vnet-s1-core.subnet_ids[0]}","${module.vnet-s1-edge.subnet_ids[0]}","${module.vnet-s2-core.subnet_ids[0]}","${module.vnet-s2-edge.subnet_ids[0]}","${module.vnet-interco.subnet_ids[0]}"]
+   network_security_group_ids = ["${module.nsg-all-subnets.id}","${module.nsg-all-subnets.id}","${module.nsg-all-subnets.id}","${module.nsg-all-subnets.id}","${module.nsg-all-subnets.id}"]
+}

@@ -70,4 +70,6 @@ module "nic-pip" {
   resource_group_name = var.resource_group_name
   short_location      = var.short_location
   public_ip_name      = var.public_ip_name
+  sku                 = var.public_ip_sku
+  public_ip_allocation_method = var.public_ip_allocation_method
 }

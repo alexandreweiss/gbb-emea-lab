@@ -23,9 +23,21 @@ variable "short_location" {
 variable "subnet_names" {   
    type = list(string)
    description = "Names of the subnet to create"
- }
+}
 
 variable "subnet_prefixes" {   
    type = list(string)
    description = "The address prefix to use for the subnet"
- }
+}
+
+variable "route_table_ids" {   
+   type        = list(string)
+   description = "Id of the route table to attach to subnet"
+   default     = []
+}
+
+variable "network_security_group_ids" {   
+   type        = list(string)
+   description = "Id of the NSG to attach to subnet"
+   default     = []
+}
