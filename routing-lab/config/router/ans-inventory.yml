@@ -1,0 +1,3 @@
+[local]
+#We use only loopback address as playbook is ran locally on each node
+127.0.0.1
