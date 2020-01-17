@@ -20,7 +20,7 @@
       copy:
         src: "/usr/share/doc/quagga/examples/{{ item }}.conf.sample"
         dest: "/etc/quagga/{{ item }}.conf"
-        user: quagga
+        owner: quagga
         group: quagga
       with_items:
         - 'zebra'
