@@ -15,3 +15,22 @@
         sysctl_set: yes
         state: present
         reload: yes
+
+    - name: copy default configuration files
+      copy:
+        src: "usr/share/doc/quagga/examples/{{ item }}.conf.sample"
+        dst: "/etc/quagga/{{ item }}.conf"
+        user: quagga
+        group: quagga
+      with_items:
+        - 'zebra'
+        - 'bgpd'
+    
+    - name: configure zebra daemon to start ...
+      lineinfile:
+        path: "/etc/quagga/daemons.conf"
+        regex: '^{{ item }}=no'
+        line: "{{ item }}=yes"
+      with_items:
+        - 'zebra'
+        - 'bgpd'

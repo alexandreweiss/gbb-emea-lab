@@ -26,6 +26,11 @@ variable "location" {
     default = "francecentral"
 }
 
+variable "trigger" {
+    description = "A trigger to get the extension deployed every time"
+    default = "rerunExtension"
+}
+
 variable "settings" {
   type = string
   default = <<SETTINGS
