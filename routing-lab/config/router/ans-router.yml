@@ -19,7 +19,7 @@
     - name: copy default configuration files
       copy:
         src: "usr/share/doc/quagga/examples/{{ item }}.conf.sample"
-        dst: "/etc/quagga/{{ item }}.conf"
+        dest: "/etc/quagga/{{ item }}.conf"
         user: quagga
         group: quagga
       with_items:
