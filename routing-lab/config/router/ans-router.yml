@@ -28,7 +28,7 @@
     
     - name: configure zebra daemon to start ...
       lineinfile:
-        path: "/etc/quagga/daemons.conf"
+        path: "/etc/quagga/daemons"
         regex: '^{{ item }}=no'
         line: "{{ item }}=yes"
       with_items:
