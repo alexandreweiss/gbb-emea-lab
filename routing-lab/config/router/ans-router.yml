@@ -25,7 +25,7 @@
         # We don't want to override config made on the file on router, only copy if file is not there
         force: no
       with_items:
-        - "{{ daemonList }}"
+        - "{{ daemon_list }}"
     
     - name: configure zebra daemon to start ...
       lineinfile:
@@ -33,7 +33,7 @@
         regex: '^{{ item }}=no'
         line: "{{ item }}=yes"
       with_items:
-        - "{{ daemonList }}"
+        - "{{ daemon_list }}"
 
     - name: configure hostname in config files ...
       lineinfile:
@@ -41,4 +41,4 @@
         regex: '^hostname'
         line: "hostname {{ vm_hostname }}"
       with_items:
-        - "{{ daemonList }}"
+        - "{{ daemon_list }}"
