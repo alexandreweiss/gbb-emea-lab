@@ -33,4 +33,13 @@
         line: "{{ item }}=yes"
       with_items:
         - 'zebra'
+        - 'bgpd'    
+
+    - name: configure hostname in config files ...
+      lineinfile:
+        path: "/etc/quagga/{{ item }}.conf"
+        regex: '^hostname'
+        line: "hostname {{ vm_hostname }}"
+      with_items:
+        - 'zebra'
         - 'bgpd'
