@@ -22,9 +22,10 @@
         dest: "/etc/quagga/{{ item }}.conf"
         owner: quagga
         group: quagga
+        # We don't want to override config made on the file on router, only copy if file is not there
+        force: no
       with_items:
-        - 'zebra'
-        - 'bgpd'
+        - "{{ daemonList }}"
     
     - name: configure zebra daemon to start ...
       lineinfile:
@@ -32,8 +33,7 @@
         regex: '^{{ item }}=no'
         line: "{{ item }}=yes"
       with_items:
-        - 'zebra'
-        - 'bgpd'    
+        - "{{ daemonList }}"
 
     - name: configure hostname in config files ...
       lineinfile:
@@ -41,5 +41,4 @@
         regex: '^hostname'
         line: "hostname {{ vm_hostname }}"
       with_items:
-        - 'zebra'
-        - 'bgpd'
+        - "{{ daemonList }}"
