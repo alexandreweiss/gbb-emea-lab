@@ -6,7 +6,7 @@ hostname bgpd-{{ ansible_hostname }}
 password zebra
 log stdout
 !
-router bgp {{ routers.{{ ansible_hostname }}.asn }}
+router bgp {{ lookup('vars', 'routers.' + ansible_hostname + '.asn') }}
  bgp router-id {{ ansible_eth0.ipv4.address }}
  {% for prefixes in lookup('vars', 'routers.' + ansible_hostname + '.prefixes.values()') %}
  network {{ prefixes }}
