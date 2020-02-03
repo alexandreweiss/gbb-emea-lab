@@ -39,6 +39,6 @@
       lineinfile:
         path: "/etc/quagga/{{ item }}.conf"
         regex: '^hostname'
-        line: "hostname {{ vm_hostname }}"
+        line: "hostname {{ item }}-{{ vm_hostname }}"
       with_items:
         - "{{ daemon_list }}"
