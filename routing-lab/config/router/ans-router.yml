@@ -1,6 +1,15 @@
 ---
 - hosts: local
 
+  vars:
+    routers:
+      - { name: s1-edge, asn: 64601, prefixes: ['10.0.0.0/24'] }
+      - { name: s1-interco-1, asn: 64601 }
+      - { name: s1-interco-2, asn: 64601 }
+      - { name: s2-interco-1, asn: 64602 }
+      - { name: s2-interco-2, asn: 64602 }
+      - { name: s2-edge, asn: 64602, prefixes: ['192.168.0.0/24'] }
+
   tasks:
 
     - name: install the latest version of guaqqa ...
@@ -42,3 +51,36 @@
         line: "hostname {{ item }}-{{ vm_hostname }}"
       with_items:
         - "{{ daemon_list }}"
+
+    - name: configure vtysh in environment file ...
+      lineinfile:
+        path: "/etc/environment"
+        line: "VTYSH_PAGER=more"
+
+    # - name: configure router id in bgpd config file ...
+    #   lineinfile:
+    #     path: "/etc/quagga/bgpd.conf"
+    #     regex: '^bgp router-id'
+    #     line: "bgp router-id {{ ansible_eth0.ipv4.address }}"
+    #   with_items:
+    #     - "bgpd"
+ 
+    # - name: configure router id in bgpd config file ...
+    #   lineinfile:
+    #     path: "/etc/quagga/bgpd.conf"
+    #     regex: '^bgp router-id'
+    #     line: "bgp router-id {{ ansible_eth0.ipv4.address }}"
+    #   with_items:
+    #     - "bgpd"
+
+    - name: render quagga configuration files to /etc/quagga folder ...
+      template:
+        src: "{{ playbook_dir }}/{{ item }}.conf.j2"
+        dest: /etc/quagga/{{ item }}.conf
+      with_items:
+        - "{{ daemon_list }}"
+       
+    - name: restart quagga service ...
+      service:
+        name: quagga
+        state: restarted

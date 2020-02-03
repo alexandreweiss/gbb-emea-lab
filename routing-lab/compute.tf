@@ -35,6 +35,8 @@ module "s1-edge-extenstion" {
             "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/install-router.sh",
             "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-router.yml",
             "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/router/ans-inventory.yml"
+            "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/files/zebra.conf.j2"
+            "https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/routing-lab/config/files/bgpd.conf.j2"
         ]
         }
     SETTINGS

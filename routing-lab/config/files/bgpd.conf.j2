@@ -1,0 +1,16 @@
+!
+! Zebra configuration saved from vty
+!   2020/02/03 16:39:35
+!
+hostname bgpd-{{ ansible_hostname }}
+password zebra
+log stdout
+!
+router bgp {{ item.1 }}
+ bgp router-id {{ ansible_eth0.ipv4.address }}
+ {% for prefixes in routers.{{ ansible_hostname }}.prefixes.values() %}
+ network {{ prefixes }}
+ {% endfor %}
+!
+line vty
+!

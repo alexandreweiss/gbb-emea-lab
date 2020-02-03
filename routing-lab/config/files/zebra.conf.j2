@@ -1,0 +1,20 @@
+!
+! Zebra configuration saved from vty
+!   2020/02/03 16:39:35
+!
+hostname zebra-{{ ansible_hostname }}
+password zebra
+enable password zebra
+!
+interface eth0
+ no link-detect
+ ipv6 nd suppress-ra
+!
+interface lo
+ no link-detect
+!
+ip forwarding
+!
+!
+line vty
+!
