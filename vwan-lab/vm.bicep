@@ -36,7 +36,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
       imageReference: {
         offer: 'UbuntuServer'
         publisher: 'Canonical'
-        sku: '20.04-LTS'
+        sku: '20_04-lts-gen2'
         version: 'latest'
       }
       osDisk: {
