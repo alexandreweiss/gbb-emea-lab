@@ -1,12 +1,13 @@
 param nicName string
 param location string
 param subnetId string
+param enableForwarding bool
 
 resource nic 'Microsoft.Network/networkInterfaces@2020-08-01' = {
   name: nicName
   location: location
   properties: {
-    enableIPForwarding:true
+    enableIPForwarding: enableForwarding
     ipConfigurations: [
       {
         name: 'ipconfig0'
