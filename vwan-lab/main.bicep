@@ -22,6 +22,134 @@ resource vhubfrc 'Microsoft.Network/virtualHubs@2020-08-01' = {
   }
 }
 
+// vHub route table for NVA vNet
+// resource frcRtNva 'Microsoft.Network/virtualHubs/routeTables@2020-08-01' = {
+//   name: 'rtNva'
+//   parent: vhubfrc
+//   properties: {
+//     attachedConnections: [
+//       resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'vn-frc-nva-0')
+//     ]
+//     routes: [
+//       {
+        
+//       }
+//     ]
+//   }
+// }
+
+resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
+  name: 'rtNva'
+  parent: vhubfrc
+  properties: {
+    routes: [
+    ]
+  }
+}
+
+resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
+  name: 'rtVnet'
+  parent: vhubfrc
+  properties: {
+    routes: [
+      {
+        destinations: [
+          '0.0.0.0/0'
+        ]
+        destinationType: 'CIDR'
+        name: 'toInternet'
+        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'vn-frc-nva-0')
+        nextHopType: 'ResourceId'
+      }
+    ]
+  }
+}
+
+// vHub route table for NON NVA vNet
+// resource frcRtVnet 'Microsoft.Network/virtualHubs/routeTables@2020-08-01' = {
+//   name: 'rtVnet'
+//   parent: vhubfrc
+//   properties: {
+//     routes: [
+//       {
+//         destinations: [
+//           '0.0.0.0/0'
+//         ]
+//         destinationType: 'CIDR'
+//         nextHops: [
+//           vnfrcnvaConnection.id
+//         ]
+//         nextHopType: 'ResourceId'
+//       }
+//     ]
+//     attachedConnections: [
+//       resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'vn-frc-spoke-0')
+//     ]
+//   }
+// }
+
+// FRC - PEERING TO VHUB
+// FRC - NVA VNET to VWAN FRC HUB CONNECTION
+resource vnfrcnvaConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
+  name: vnfrcnva.name
+  parent: vhubfrc
+  properties: {
+    remoteVirtualNetwork: {
+      id: vnfrcnva.outputs.vnetId
+    }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtNva')
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtVnet')
+          }
+        ]
+      }
+      vnetRoutes: {
+        staticRoutes: [
+          {
+            addressPrefixes: [
+              '0.0.0.0/0'
+            ]
+            name: 'toInternet'
+            nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+          }
+        ]
+      }
+    }
+  }
+}
+
+// FRC - NON NVA VNET to VWAN FRC HUB CONNECTION
+resource vnfrcspoke0Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
+  name: vnfrcspoke0.name
+  parent: vhubfrc
+  properties: {
+    remoteVirtualNetwork: {
+      id: vnfrcspoke0.outputs.vnetId
+    }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtVnet')
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: frcRtVnet.id
+          }
+          {
+            id: frcRtNva.id
+          }
+        ]
+      }
+    }
+  }
+}
+// END OF PEERING TO VHUB
+
 // Express Route Scale unit in FRC
 resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = {
   name: 'er-frc-gw'
@@ -127,29 +255,7 @@ resource Spoke01Nva0 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2
 
 // END OF PEERINGS
 
-// FRC - PEERING TO VHUB
-// FRC - NVA VNET to VWAN FRC HUB CONNECTION
-resource vnfrcnvaConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
-  name: vnfrcnva.name
-  parent: vhubfrc
-  properties: {
-    remoteVirtualNetwork: {
-      id: vnfrcnva.outputs.vnetId
-    }
-  }
-}
 
-// FRC - NON NVA VNET to VWAN FRC HUB CONNECTION
-resource vnfrcspoke0Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
-  name: vnfrcspoke0.name
-  parent: vhubfrc
-  properties: {
-    remoteVirtualNetwork: {
-      id: vnfrcspoke0.outputs.vnetId
-    }
-  }
-}
-// END OF PEERING TO VHUB
 
 // VWAN UKS vHub
 resource vhubuks 'Microsoft.Network/virtualHubs@2020-08-01' = {
@@ -290,6 +396,7 @@ module vmNvaFrc 'vm.bicep' = {
     subnetId: vnfrcnva.outputs.subnetId
     vmName: 'vm-nva-frc'
     enableForwarding: true
+    createPublicIp: true
   }
 }
 

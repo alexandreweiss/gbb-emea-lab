@@ -2,6 +2,8 @@ param vmName string
 param location string
 param subnetId string
 param enableForwarding bool = false
+param createPublicIp bool = false
+param enableCloudInit bool = false
 
 module nic 'nic.bicep' = {
   name: '${vmName}-nic'
@@ -10,6 +12,7 @@ module nic 'nic.bicep' = {
     nicName: '${vmName}-nic'
     subnetId: subnetId
     enableForwarding: enableForwarding
+    createPublicIp: createPublicIp
   }
 }
 
@@ -18,6 +21,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   location: location
   properties: {
     osProfile: {
+      customData: '#include\n https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/vwan-lab/config-files/${vmName}-ci.tpl'
       adminUsername: 'admin-lab'
       linuxConfiguration: {
         disablePasswordAuthentication: true
@@ -83,3 +87,4 @@ resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
   }
 }
 
+output nicPrivateIp string = nic.outputs.nicPrivateIp
