@@ -164,7 +164,15 @@ resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = {
       }
     }
   }
-
+  resource erCircuit 'expressRouteConnections@2020-08-01' = {
+    name: 'er-london-con'
+    properties: {
+      authorizationKey: ''
+      expressRouteCircuitPeering: {
+        id: '/subscriptions/4fbab7ae-eef5-4d74-bf4f-4bab262eff9a/resourceGroups/GBB-ER-LAB-NE/providers/Microsoft.Network/expressRouteCircuits/Intercloud-London/peerings/AzurePrivatePeering'
+      }
+    }
+  }
 }
 
 // FRC - NVA VNET
@@ -397,6 +405,7 @@ module vmNvaFrc 'vm.bicep' = {
     vmName: 'vm-nva-frc'
     enableForwarding: true
     createPublicIp: true
+    enableCloudInit: true
   }
 }
 
