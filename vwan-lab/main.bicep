@@ -1,5 +1,6 @@
 param frLocation string = 'francecentral'
 param ukLocation string = 'uksouth'
+param deployEr bool = false
 
 // Virtual Wan master
 resource vwan 'Microsoft.Network/virtualWans@2020-08-01' = {
@@ -106,6 +107,9 @@ resource vnfrcnvaConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
           {
             id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtVnet')
           }
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'defaultRouteTable')
+          }
         ]
       }
       vnetRoutes: {
@@ -151,7 +155,7 @@ resource vnfrcspoke0Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkC
 // END OF PEERING TO VHUB
 
 // Express Route Scale unit in FRC
-resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = {
+resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(deployEr) {
   name: 'er-frc-gw'
   location: frLocation
   properties: {
@@ -167,7 +171,7 @@ resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = {
   resource erCircuit 'expressRouteConnections@2020-08-01' = {
     name: 'er-london-con'
     properties: {
-      authorizationKey: ''
+      authorizationKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
       expressRouteCircuitPeering: {
         id: '/subscriptions/4fbab7ae-eef5-4d74-bf4f-4bab262eff9a/resourceGroups/GBB-ER-LAB-NE/providers/Microsoft.Network/expressRouteCircuits/Intercloud-London/peerings/AzurePrivatePeering'
       }

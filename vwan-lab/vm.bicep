@@ -21,7 +21,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   location: location
   properties: {
     osProfile: {
-      customData: enableCloudInit ? '#include\n https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/vwan-lab/config-files/${vmName}-ci.tpl' : ''
+      customData: enableCloudInit ? 'I2luY2x1ZGUKaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FsZXhhbmRyZXdlaXNzL2diYi1lbWVhLWxhYi9kZXZlbG9wL3Z3YW4tbGFiL2NvbmZpZy1maWxlcy92bS1udmEtZnJjLWNpLnRwbA==' : ''
       adminUsername: 'admin-lab'
       linuxConfiguration: {
         disablePasswordAuthentication: true
