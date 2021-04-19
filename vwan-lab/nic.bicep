@@ -4,9 +4,30 @@ param subnetId string
 param enableForwarding bool
 param createPublicIp bool
 
-//var publicIpId = createPublicIp ? json('{ id: ${publicIp.id} }') : json('notCreated')
+resource nicPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(createPublicIp) {
+  name: '${nicName}-public'
+  location: location
+  properties: {
+    enableIPForwarding: enableForwarding
+    ipConfigurations: [
+      {
+        name: 'ipconfig0'
+        properties: {
+          primary:true
+          privateIPAllocationMethod:'Dynamic'
+          subnet: {
+            id: subnetId
+          }
+          publicIPAddress: {
+            id: publicIp.id
+          }
+        }
+      }
+    ]
+  }
+}
 
-resource nic 'Microsoft.Network/networkInterfaces@2020-08-01' = {
+resource nicNoPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(!createPublicIp) {
   name: nicName
   location: location
   properties: {
@@ -20,7 +41,6 @@ resource nic 'Microsoft.Network/networkInterfaces@2020-08-01' = {
           subnet: {
             id: subnetId
           }
-          //publicIPAddress: publicIpId
         }
       }
     ]
@@ -28,7 +48,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2020-08-01' = {
 }
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2020-08-01' = if(createPublicIp) {
-  name: nicName
+  name: '${nicName}-pip'
   location: location
   sku: {
     name:'Standard'
@@ -39,5 +59,5 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2020-08-01' = if(createPu
   }
 }
 
-output nicId string = nic.id
-output nicPrivateIp string = nic.properties.ipConfigurations[0].properties.privateIPAddress
+output nicId string = createPublicIp ? '${nicPip.id}' : '${nicNoPip.id}'
+output nicPrivateIp string = createPublicIp ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}' 
