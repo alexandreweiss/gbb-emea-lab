@@ -58,7 +58,7 @@ resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
           '0.0.0.0/0'
         ]
         destinationType: 'CIDR'
-        name: 'toInternet'
+        name: 'toInternetAndSpokesXX'
         nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'vn-frc-nva-0')
         nextHopType: 'ResourceId'
       }
@@ -66,28 +66,26 @@ resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
   }
 }
 
-// vHub route table for NON NVA vNet
-// resource frcRtVnet 'Microsoft.Network/virtualHubs/routeTables@2020-08-01' = {
-//   name: 'rtVnet'
-//   parent: vhubfrc
-//   properties: {
-//     routes: [
-//       {
-//         destinations: [
-//           '0.0.0.0/0'
-//         ]
-//         destinationType: 'CIDR'
-//         nextHops: [
-//           vnfrcnvaConnection.id
-//         ]
-//         nextHopType: 'ResourceId'
-//       }
-//     ]
-//     attachedConnections: [
-//       resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'vn-frc-spoke-0')
-//     ]
-//   }
-// }
+
+//vHub default route table
+resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
+  name: 'defaultRouteTable'
+  parent: vhubfrc
+  properties: {
+    routes: [
+      {
+        destinations: [
+          '0.0.0.0/0'
+          '192.168.14.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: vnfrcnvaConnection.id
+        nextHopType: 'ResourceId'
+        name: 'toInternetAndSpokesXX'
+      }
+    ]
+  }
+}
 
 // FRC - PEERING TO VHUB
 // FRC - NVA VNET to VWAN FRC HUB CONNECTION
@@ -117,8 +115,11 @@ resource vnfrcnvaConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
           {
             addressPrefixes: [
               '0.0.0.0/0'
+              '192.168.12.0/24'
+              '192.168.13.0/24'
+              '192.168.14.0/24'
             ]
-            name: 'toInternet'
+            name: 'toInternetAndSpokesXX'
             nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
           }
         ]
@@ -175,6 +176,18 @@ resource vhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(deplo
       authorizationKey: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
       expressRouteCircuitPeering: {
         id: '/subscriptions/4fbab7ae-eef5-4d74-bf4f-4bab262eff9a/resourceGroups/GBB-ER-LAB-NE/providers/Microsoft.Network/expressRouteCircuits/Intercloud-London/peerings/AzurePrivatePeering'
+      }
+      routingConfiguration: {
+        associatedRouteTable: {
+          id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'defaultRouteTable')
+        }
+        propagatedRouteTables: {
+          ids: [
+            {
+              id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtNva')
+            }
+          ]
+        }
       }
     }
   }
