@@ -2,6 +2,38 @@ param vnetName string
 param addressSpace string
 param addressPrefix string
 param location string
+param routeTableId string = 'non'
+
+var routeTableVar = {
+  routeTable: {
+    id: routeTableId 
+  }
+}
+
+var nonRouteTable = {
+  addressPrefix: addressPrefix
+}
+
+// resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
+//   name: vnetName
+//   location: location
+//   properties: {
+//     addressSpace: {
+//       addressPrefixes: [
+//         addressSpace
+//       ]
+//     }
+//     subnets: [
+//       {
+//         name: 'default'
+//         properties: {
+//           addressPrefix: addressPrefix
+//           routeTable: routeTableId == 'non' ? json('null') : routeTableId
+//         }
+//       }
+//     ]
+//   }
+// }
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
   name: vnetName
@@ -15,9 +47,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
     subnets: [
       {
         name: 'default'
-        properties: {
-          addressPrefix: addressPrefix
-        }
+        properties: routeTableId == 'non' ? nonRouteTable : union(nonRouteTable, routeTableVar)
       }
     ]
   }

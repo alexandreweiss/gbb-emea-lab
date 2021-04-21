@@ -2,7 +2,8 @@ param vmName string
 param location string
 param subnetId string
 param enableForwarding bool = false
-param createPublicIp bool = false
+param createPublicIpNsg bool = false
+param createNsg bool = false
 param enableCloudInit bool = false
 
 module nic 'nic.bicep' = {
@@ -12,7 +13,9 @@ module nic 'nic.bicep' = {
     nicName: '${vmName}-nic'
     subnetId: subnetId
     enableForwarding: enableForwarding
-    createPublicIp: createPublicIp
+    createPublicIpNsg: createPublicIpNsg
+    createNsg: createNsg
+    vmName: vmName
   }
 }
 

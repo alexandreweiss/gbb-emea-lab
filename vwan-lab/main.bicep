@@ -150,6 +150,7 @@ resource vnfrcspoke0Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkC
         ]
       }
     }
+    enableInternetSecurity: true
   }
 }
 // END OF PEERING TO VHUB
@@ -198,6 +199,7 @@ module vnfrcspoke00 'vnet.bicep' = {
     addressSpace: '192.168.12.0/24'
     vnetName: 'vn-frc-spoke-0-0'
     location: frLocation
+    routeTableId: nonNvaVnetRt.id
   }
 }
 
@@ -209,6 +211,25 @@ module vnfrcspoke01 'vnet.bicep' = {
     addressSpace: '192.168.13.0/24'
     vnetName: 'vn-frc-spoke-0-1'
     location: frLocation
+    routeTableId: nonNvaVnetRt.id
+  }
+}
+
+// FRC - UDR FOR NON NVA VNET PEERED TO NVA VNET
+resource nonNvaVnetRt 'Microsoft.Network/routeTables@2020-11-01' = {
+  name: 'spokesXX-rt'
+  location: frLocation
+  properties: {
+    routes: [
+      {
+        name: 'default'
+        properties: {
+          addressPrefix: '0.0.0.0/0'
+          nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+          nextHopType:'VirtualAppliance'
+        }
+      }
+    ]
   }
 }
 
@@ -397,8 +418,6 @@ resource vnuksspoke0Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkC
 
 // Express Route circuit to FRC
 
-
-
 // VMs
 // FRC - NVA
 module vmNvaFrc 'vm.bicep' = {
@@ -408,8 +427,9 @@ module vmNvaFrc 'vm.bicep' = {
     subnetId: vnfrcnva.outputs.subnetId
     vmName: 'vm-nva-frc'
     enableForwarding: true
-    createPublicIp: true
+    createPublicIpNsg: true
     enableCloudInit: true
+    createNsg: true
   }
 }
 
