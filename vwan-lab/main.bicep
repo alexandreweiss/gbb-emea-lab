@@ -1,10 +1,13 @@
 param frLocation string = 'francecentral'
-param ukLocation string = 'uksouth'
+param uksLocation string = 'uksouth'
 param deployEr bool = false
 @secure()
 param erAuthKey string
 @secure()
 param erCircuitId string
+
+var frcDefaultRouteTable = 'defaultRouteTable'
+var uksDefaultRouteTable = 'defaultRouteTable'
 
 ///////////////////////////////VWAN///////////////////////////////////////////////////
 // Virtual Wan master
@@ -29,6 +32,7 @@ resource vhubfrc 'Microsoft.Network/virtualHubs@2020-08-01' = {
 }
 
 //////////////////////////////////////ROUTE TABLES////////////////////////////////////////////
+//// FRC ///
 resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
   name: 'rtNva'
   parent: vhubfrc
@@ -87,22 +91,13 @@ resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
         nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'frc-vnet4')
         nextHopType: 'ResourceId'
       }
-      {
-        destinations: [
-          '128.0.0.0/1'
-        ]
-        destinationType: 'CIDR'
-        name: 'toInternet'
-        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubfrc.name, 'frc-vnet4')
-        nextHopType: 'ResourceId'
-      }
     ]
   }
 }
 
 //vHub default route table
 resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
-  name: 'defaultRouteTable'
+  name: frcDefaultRouteTable
   parent: vhubfrc
   dependsOn: [
     [
@@ -154,6 +149,113 @@ resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' 
   }
 }
 
+/////// UKS ROUTE TABLE
+
+resource uksRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
+  name: 'rtNva'
+  parent: vhubuks
+  properties: {
+    routes: [
+    ]
+  }
+}
+
+resource uksRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
+  name: 'rtVnet'
+  parent: vhubuks
+  dependsOn: [
+    [
+      uksVnet2Connection
+    ]
+    [
+      frcVnet4Connection
+    ]
+  ]
+  properties: {
+    routes: [
+      {
+        destinations: [
+          '192.168.22.0/24'
+        ]
+        destinationType: 'CIDR'
+        name: 'toVnet5'
+        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubuks.name, 'uks-vnet2')
+        nextHopType: 'ResourceId'
+      }
+      {
+        destinations: [
+          '192.168.23.0/24'
+        ]
+        destinationType: 'CIDR'
+        name: 'toVnet6'
+        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubuks.name, 'uks-vnet2')
+        nextHopType: 'ResourceId'
+      }
+      {
+        destinations: [
+          '0.0.0.0/0'
+        ]
+        destinationType: 'CIDR'
+        name: 'toInternet'
+        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', vhubuks.name, 'uks-vnet2')
+        nextHopType: 'ResourceId'
+      }
+    ]
+  }
+}
+
+//vHub default route table
+resource uksRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
+  name: uksDefaultRouteTable
+  parent: vhubuks
+  dependsOn: [
+    [
+      uksVnet2Connection
+    ]
+  ]
+  properties: {
+    routes: [
+      {
+        destinations: [
+          '0.0.0.0/0'
+        ]
+        destinationType: 'CIDR'
+        nextHop: uksVnet2Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toInternet'
+      }
+      {
+        destinations: [
+          '192.168.22.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: uksVnet2Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toVnet5'
+      }
+      {
+        destinations: [
+          '192.168.23.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: uksVnet2Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toVnet6'
+      }
+      {
+        destinations: [
+          '192.168.24.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: uksVnet2Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toVnet1'
+      }
+    ]
+  }
+}
+
+////////////////////////////////////END OF ROUTE TABLE ///////////////////////////////////////
 ////////////////////////////////////VNET TO VHUB//////////////////////////////////////////////
 // FRC - PEERING TO VHUB
 // FRC - NVA VNET to VWAN FRC HUB CONNECTION
@@ -174,7 +276,7 @@ resource frcVnet4Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
             id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'rtVnet')
           }
           {
-            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, 'defaultRouteTable')
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, frcDefaultRouteTable)
           }
         ]
       }
@@ -185,28 +287,28 @@ resource frcVnet4Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
               '192.168.2.0/24'
             ]
             name: 'toOnPrem'
-            nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
           }
           {
             addressPrefixes: [
               '0.0.0.0/0'
             ]
             name: 'toInternet'
-            nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
           }
           {
             addressPrefixes: [
               '192.168.12.0/24'
             ]
             name: 'toVnet7'
-            nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
           }
           {
             addressPrefixes: [
               '192.168.13.0/24'
             ]
             name: 'toVnet8'
-            nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
           }
         ]
       }
@@ -302,7 +404,7 @@ module frcVnet7 'vnet.bicep' = {
     addressSpace: '192.168.12.0/24'
     vnetName: 'frc-vnet7'
     location: frLocation
-    routeTableId: nonNvaVnetRt.id
+    routeTableId: frcVnet78Rt.id
   }
 }
 
@@ -314,12 +416,12 @@ module frcVnet8 'vnet.bicep' = {
     addressSpace: '192.168.13.0/24'
     vnetName: 'frc-vnet8'
     location: frLocation
-    routeTableId: nonNvaVnetRt.id
+    routeTableId: frcVnet78Rt.id
   }
 }
 
 // FRC - UDR FOR NON NVA VNET PEERED TO NVA VNET
-resource nonNvaVnetRt 'Microsoft.Network/routeTables@2020-11-01' = {
+resource frcVnet78Rt 'Microsoft.Network/routeTables@2020-11-01' = {
   name: 'frc-vnet7-vnet8-rt'
   location: frLocation
   properties: {
@@ -328,7 +430,7 @@ resource nonNvaVnetRt 'Microsoft.Network/routeTables@2020-11-01' = {
         name: 'default'
         properties: {
           addressPrefix: '0.0.0.0/0'
-          nextHopIpAddress: vmNvaFrc.outputs.nicPrivateIp
+          nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
           nextHopType:'VirtualAppliance'
         }
       }
@@ -396,7 +498,7 @@ resource vnet8Vnet4Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
 // VWAN UKS vHub
 resource vhubuks 'Microsoft.Network/virtualHubs@2020-08-01' = {
   name: 'h-uks'
-  location: ukLocation
+  location: uksLocation
   properties: {
     addressPrefix: '192.168.20.0/24'
     sku: 'Standard'
@@ -410,15 +512,12 @@ resource vhubuks 'Microsoft.Network/virtualHubs@2020-08-01' = {
 module uksVnet2 'vnet.bicep' = {
   name: 'uks-vnet2'
   dependsOn: [
-    [
-      uksVnet1Connection
-    ]
   ]
   params: {
     addressPrefix: '192.168.21.0/28'
     addressSpace: '192.168.21.0/24'
     vnetName: 'uks-vnet2'
-    location: ukLocation
+    location: uksLocation
   }
 }
 
@@ -429,7 +528,8 @@ module uksVnet5 'vnet.bicep' = {
     addressPrefix: '192.168.22.0/28'
     addressSpace: '192.168.22.0/24'
     vnetName: 'uks-vnet5'
-    location: ukLocation
+    location: uksLocation
+    routeTableId: uksVnet56Rt.id
   }
 }
 
@@ -440,7 +540,25 @@ module uksVnet6 'vnet.bicep' = {
     addressPrefix: '192.168.23.0/28'
     addressSpace: '192.168.23.0/24'
     vnetName: 'uks-vnet6'
-    location: ukLocation
+    location: uksLocation
+    routeTableId: uksVnet56Rt.id
+  }
+}
+
+resource uksVnet56Rt 'Microsoft.Network/routeTables@2020-11-01' = {
+  name: 'uks-vnet5-vnet6-rt'
+  location: uksLocation
+  properties: {
+    routes: [
+      {
+        name: 'default'
+        properties: {
+          addressPrefix: '0.0.0.0/0'
+          nextHopIpAddress: uksVmNva.outputs.nicPrivateIp
+          nextHopType:'VirtualAppliance'
+        }
+      }
+    ]
   }
 }
 
@@ -451,7 +569,7 @@ module uksVnet1 'vnet.bicep' = {
     addressPrefix: '192.168.24.0/28'
     addressSpace: '192.168.24.0/24'
     vnetName: 'uks-vnet1'
-    location: ukLocation
+    location: uksLocation
   }
 }
 
@@ -500,7 +618,7 @@ resource uksVnet6Vnet2Peering 'Microsoft.Network/virtualNetworks/virtualNetworkP
 // END OF PEERINGS
 
 
-// UKS - PEERING TO VHUB
+///////////////////// UKS - PEERING TO VHUB ////////////////////////////////
 // UKS - NVA VNET to VWAN FRC HUB CONNECTION
 resource uksVnet2Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
   name: uksVnet2.name
@@ -508,6 +626,46 @@ resource uksVnet2Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
   properties: {
     remoteVirtualNetwork: {
       id: uksVnet2.outputs.vnetId
+    }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'rtNva')
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'rtVnet')
+          }
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, uksDefaultRouteTable)
+          }
+        ]
+      }
+      vnetRoutes: {
+        staticRoutes: [
+          {
+            addressPrefixes: [
+              '0.0.0.0/0'
+            ]
+            name: 'toInternet'
+            nextHopIpAddress: uksVmNva.outputs.nicPrivateIp
+          }
+          {
+            addressPrefixes: [
+              '192.168.22.0/24'
+            ]
+            name: 'toVnet5'
+            nextHopIpAddress: uksVmNva.outputs.nicPrivateIp
+          }
+          {
+            addressPrefixes: [
+              '192.168.23.0/24'
+            ]
+            name: 'toVnet6'
+            nextHopIpAddress: uksVmNva.outputs.nicPrivateIp
+          }
+        ]
+      }
     }
   }
 }
@@ -520,15 +678,31 @@ resource uksVnet1Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     remoteVirtualNetwork: {
       id: uksVnet1.outputs.vnetId
     }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'rtVnet')
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: uksRtVnet.id
+          }
+          {
+            id: uksRtNva.id
+          }
+        ]
+      }
+    }
+    enableInternetSecurity: true
   }
 }
 // END OF PEERING TO VHUB
 
 // Express Route circuit to FRC
 
-// VMs
+/////////////////////// VMs ///////////////////////////////
 // FRC - NVA
-module vmNvaFrc 'vm.bicep' = {
+module frcVmNva 'vm.bicep' = {
   name: 'frc-nva'
   params: {
     location: frLocation
@@ -554,7 +728,7 @@ module frcVmVnet7 'vm.bicep' = {
 
 
 // FRC - NON NVA VM IN SPOKE0 PEERED TO VHUB FRC
-module vmSpoke0Frc 'vm.bicep' = {
+module frcVmVnet3 'vm.bicep' = {
   name: 'frc-vm3'
   params: {
     location: frLocation
@@ -566,10 +740,10 @@ module vmSpoke0Frc 'vm.bicep' = {
 
 
 // UKS - NON NVA VM IN SPOKE0 PEERED TO VHUB UKS
-module vmSpoke0Uks 'vm.bicep' = {
+module uksVmVnet1 'vm.bicep' = {
   name: 'uks-vm1'
   params: {
-    location: ukLocation
+    location: uksLocation
     subnetId: uksVnet1.outputs.subnetId
     vmName: 'uks-vm1'
     enableForwarding: false
@@ -577,10 +751,10 @@ module vmSpoke0Uks 'vm.bicep' = {
 }
 
 // UKS - NVA
-module vmNvaUks 'vm.bicep' = {
+module uksVmNva 'vm.bicep' = {
   name: 'uks-nva'
   params: {
-    location: ukLocation
+    location: uksLocation
     subnetId: uksVnet2.outputs.subnetId
     vmName: 'vm-nva-uks'
     enableForwarding: true
@@ -591,7 +765,7 @@ module vmNvaUks 'vm.bicep' = {
 module uksVmVnet5 'vm.bicep' = {
   name: 'uks-vm5'
   params: {
-    location: ukLocation
+    location: uksLocation
     subnetId: uksVnet5.outputs.subnetId
     vmName: 'vm-spoke0-0-uks'
     enableForwarding: false
