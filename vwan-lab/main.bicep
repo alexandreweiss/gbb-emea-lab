@@ -711,7 +711,6 @@ module frcVmNva 'vm.bicep' = {
     enableForwarding: true
     createPublicIpNsg: true
     enableCloudInit: true
-    createNsg: true
   }
 }
 

@@ -1,16 +1,30 @@
 param vmName string
 param location string
-param subnetId string
+param insideSubnetId string
+param outsideSubnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param enableCloudInit bool = false
+@secure()
+param adminPassword string
 
-module nic 'nic.bicep' = {
-  name: '${vmName}-nic'
+module nicInside 'nic.bicep' = {
+  name: '${vmName}-inside'
   params: {
     location: location
-    nicName: '${vmName}-nic'
-    subnetId: subnetId
+    nicName: '${vmName}-inside'
+    subnetId: insideSubnetId
+    enableForwarding: enableForwarding
+    vmName: vmName
+  }
+}
+
+module nicOutside 'nic.bicep' = {
+  name: '${vmName}-outside'
+  params: {
+    location: location
+    nicName: '${vmName}-outside'
+    subnetId: outsideSubnetId
     enableForwarding: enableForwarding
     createPublicIpNsg: createPublicIpNsg
     vmName: vmName
@@ -20,31 +34,25 @@ module nic 'nic.bicep' = {
 resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   name: vmName
   location: location
+  plan: {
+    publisher: 'cisco'
+    product: 'cisco-csr-1000v'
+    name: '17_3_2-byol'
+  }
   properties: {
     osProfile: {
-      customData: enableCloudInit ? 'I2luY2x1ZGUKaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FsZXhhbmRyZXdlaXNzL2diYi1lbWVhLWxhYi9kZXZlbG9wL3Z3YW4tbGFiL2NvbmZpZy1maWxlcy92bS1udmEtZnJjLWNpLnRwbA==' : json('null')
-      adminUsername: 'admin-lab'
-      linuxConfiguration: {
-        disablePasswordAuthentication: true
-        ssh: {
-          publicKeys: [
-            {
-              path: '/home/admin-lab/.ssh/authorized_keys'
-              keyData: 'ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQBsUy8OllCkhpOU4FplN1b7ypawC/8QM++3gb9EbqZHCJnJdTNhk/0QZVvGsPvWeSazsShgX2TdEMMdDFscWDdAfnoB+hyjhFyWaOfKXFdzafib3HrO0rGUPqW42V6d0N2V5rh23ZFZGX5Bp75KEFnrFgGY1axCebvMvStGzXXffole1sCt0SKbvFptc/MT/ZVSqT0i0ugS0dVXsb4kuo4qnNRUAqvunljDL5oS3ZT7bQtjAvcw+IyYF6Ka9pGc4EuNaYZ2YuaxMyMOKYoMq4Qz8Qk5oF34ATGCPC0SdAgtAByNblbYeB6s+ueWUwSEcKOfIKjl9lxJasCRBRkjl7zp non-prod-test'
-            }
-          ]
-        }
-      }
+      adminUsername: 'azureuser'
+      adminPassword: adminPassword
       computerName: vmName
     }
     hardwareProfile: {
-      vmSize: 'Standard_B1s'
+      vmSize: 'Standard_D2_v3'
     }
     storageProfile: {
       imageReference: {
-        offer: 'UbuntuServer'
-        publisher: 'Canonical'
-        sku: '18.04-LTS'
+        offer: 'cisco-csr-1000v'
+        publisher: 'cisco'
+        sku: '17_3_2-byol'
         version: 'latest'
       }
       osDisk: {
@@ -52,7 +60,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
         diskSizeGB: 30
         caching:'ReadWrite'
         managedDisk: {
-          storageAccountType:'Premium_LRS'
+          storageAccountType:'Standard_LRS'
         }
         name: '${vmName}-osDisk'
         osType:'Linux'
@@ -64,7 +72,13 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
           properties: {
             primary:true
           }
-          id: nic.outputs.nicId
+          id: nicOutside.outputs.nicId
+        }
+        {
+          properties: {
+            primary:false
+          }
+          id: nicInside.outputs.nicId
         }
       ]
     }
@@ -88,4 +102,5 @@ resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
   }
 }
 
-output nicPrivateIp string = nic.outputs.nicPrivateIp
+output nicOutsidePrivateIp string = nicOutside.outputs.nicPrivateIp
+output nicInsidePrivateIp string = nicInside.outputs.nicPrivateIp
