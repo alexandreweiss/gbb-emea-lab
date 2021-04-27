@@ -94,3 +94,4 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
 
 output nicId string = createPublicIpNsg ? '${nicPip.id}' : '${nicNoPip.id}'
 output nicPrivateIp string = createPublicIpNsg ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}' 
+output nicPublicIp string = createPublicIpNsg ? publicIp.properties.ipAddress : '' 

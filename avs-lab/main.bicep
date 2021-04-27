@@ -1,6 +1,8 @@
 param location string = 'francecentral'
 @secure()
 param adminPassword string
+@secure()
+param vpnPreSharedKey string
 param deployErVpn bool = false
 
 
@@ -125,4 +127,62 @@ module vpnGw 'vpngw.bicep' = if(deployErVpn) {
   }
 }
 
+resource onPremLng 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
+  name: 'toAzure'
+  location: location
+  properties: {
+    bgpSettings: {
+      asn: 64610
+      bgpPeeringAddress: '192.168.1.1'
+      peerWeight: 0
+    }
+    gatewayIpAddress: csr.outputs.nicOutsidePublicIp
+    localNetworkAddressSpace: {
+      addressPrefixes: [
+        '192.168.1.1/32'
+      ]
+    }
+  }
+}
 
+resource onPremAzureConnection 'Microsoft.Network/connections@2020-11-01' = {
+  name: 'onPremToAzure'
+  location: location
+  properties: {
+    connectionType: 'IPsec'
+    connectionProtocol: 'IKEv2'
+    connectionMode: 'Default'
+    enableBgp: true
+    sharedKey: vpnPreSharedKey
+    virtualNetworkGateway1: {
+      id: vpnGw.outputs.vpnGwId
+      properties:{
+        
+      }
+    }
+    localNetworkGateway2: {
+      id: onPremLng.id
+      properties: {
+        
+      }
+    }
+  }
+}
+
+module azureVm 'vm.bicep' = {
+  name: 'hubVm'
+  params: {
+    location: location
+    subnetId: vnet.properties.subnets[1].id
+    vmName: 'hubVm'
+  }
+}
+
+module onPremVm 'vm.bicep' = {
+  name: 'onPremVm'
+  params: {
+    location: location
+    subnetId: onPremVnet.properties.subnets[1].id
+    vmName: 'onPremVm'
+  }
+}

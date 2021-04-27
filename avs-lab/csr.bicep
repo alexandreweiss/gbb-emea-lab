@@ -104,3 +104,4 @@ resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
 
 output nicOutsidePrivateIp string = nicOutside.outputs.nicPrivateIp
 output nicInsidePrivateIp string = nicInside.outputs.nicPrivateIp
+output nicOutsidePublicIp string = nicOutside.outputs.nicPublicIp
