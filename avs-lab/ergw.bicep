@@ -1,8 +1,9 @@
 param location string
 param gwSubnetId string
+param name string
 
 resource erGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
-  name: 'er-gw'
+  name: name
   location: location
   properties: {
     gatewayType: 'ExpressRoute'

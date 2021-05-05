@@ -1,15 +1,19 @@
 param location string
+param gwName string
 param gwSubnetId string
 param asn int
 
 resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
-  name: 'vpn-gw'
+  name: gwName
   location: location
+  dependsOn: [
+    publicIp
+  ]
   properties: {
     gatewayType: 'Vpn'
     sku: {
-      name: 'Standard'
-      tier: 'Standard'
+      name: 'VpnGw1'
+      tier: 'VpnGw1'
     }
     ipConfigurations: [
       {
@@ -34,7 +38,7 @@ resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
 }
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2020-08-01' = {
-  name: 'vpngw-pip'
+  name: '${gwName}-pip'
   location: location
   sku: {
     name:'Basic'

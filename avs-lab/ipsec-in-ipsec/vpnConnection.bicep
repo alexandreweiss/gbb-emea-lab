@@ -12,7 +12,7 @@ resource onPremAzureIn1Connection 'Microsoft.Network/connections@2020-11-01' = {
     connectionType: 'IPsec'
     connectionProtocol: 'IKEv2'
     connectionMode: 'Default'
-    enableBgp: true
+    enableBgp: false
     sharedKey: vpnPreSharedKey
     virtualNetworkGateway1: {
       id: vpnGwId

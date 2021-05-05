@@ -3,7 +3,8 @@ param location string = 'francecentral'
 param adminPassword string
 @secure()
 param vpnPreSharedKey string
-param deployErVpn bool = true
+param deployErVpn bool = false
+param deployVr bool = false
 param vWanVpnIn0 string = '20.49.231.67'
 param vWanVpnIn1 string = '20.49.231.66'
 param vWanBgpIn0 string = '10.0.5.14'
@@ -31,6 +32,9 @@ resource onPremVnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
         name: 'default'
         properties: {
           addressPrefix: '172.22.0.16/28'
+          routeTable: {
+            id: onPremRt.id
+          }
         }
       }
       {
@@ -68,16 +72,19 @@ module csr 'csr.bicep' = {
   }
 }
 
-resource routeServer 'Microsoft.Network/virtualHubs@2020-11-01' = {
-  name: 'ipsecVr'
+resource routeServer 'Microsoft.Network/virtualHubs@2020-11-01' = if(deployVr) {
+  name: 'vr0'
   location: location
+  dependsOn: [
+    vpnGw
+  ]
   properties: {
     sku: 'Standard'
   }
 }
 
-resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@2020-11-01' = {
-  name: 'ipsecVr'
+resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@2020-11-01' = if(deployVr) {
+  name: 'vr0'
   parent: routeServer
   properties: {
     subnet: {
@@ -88,7 +95,11 @@ resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@202
 
 module vpnGw 'vpngw.bicep' = if(deployErVpn) {
   name: 'vpngw'
+  dependsOn: [
+    onPremVnet
+  ]
   params: {
+    gwName: 'vpngw'
     gwSubnetId: onPremVnet.properties.subnets[0].id
     location: location
     asn: 64630
@@ -99,15 +110,10 @@ resource vWanLngIn0 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
   name: 'toAzureIn0'
   location: location
   properties: {
-    bgpSettings: {
-      asn: 64610
-      bgpPeeringAddress: vWanBgpIn0
-      peerWeight: 0
-    }
     gatewayIpAddress: vWanVpnIn0
     localNetworkAddressSpace: {
       addressPrefixes: [
-        '${vWanBgpIn0}/32'
+        '10.0.6.0/24'
       ]
     }
   }
@@ -117,15 +123,10 @@ resource vWanLngIn1 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
   name: 'toAzureIn1'
   location: location
   properties: {
-    bgpSettings: {
-      asn: 64610
-      bgpPeeringAddress: vWanBgpIn1
-      peerWeight: 0
-    }
     gatewayIpAddress: vWanVpnIn1
     localNetworkAddressSpace: {
       addressPrefixes: [
-        '${vWanBgpIn1}/32'
+        '10.0.6.0/24'
       ]
     }
   }
@@ -164,11 +165,28 @@ module onPremAzureIn1Connection 'vpnConnection.bicep' = {
 }
 
 module onPremVm 'vm.bicep' = {
-  name: 'onpremvm'
+  name: 'onpremvm0'
   params: {
     location: location
     subnetId: onPremVnet.properties.subnets[1].id
-    vmName: 'onpremvm'
+    vmName: 'onpremvm0'
     createPublicIpNsg: true
+  }
+}
+
+resource onPremRt 'Microsoft.Network/routeTables@2020-11-01' = {
+  name: 'onpremvm-rt'
+  location: location
+  properties: {
+    routes: [
+      {
+        name: 'toAvs'
+        properties: {
+          addressPrefix: '10.0.7.0/24'
+          nextHopIpAddress: '172.22.0.36'
+          nextHopType: 'VirtualAppliance'
+        }
+      }
+    ]
   }
 }

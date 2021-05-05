@@ -342,6 +342,30 @@ resource frcVnet3Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     enableInternetSecurity: true
   }
 }
+
+//TEMP PEERING TO TEST TO HUB
+resource frcVnet9Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
+  name: frcVnet9.name
+  parent: vhubfrc
+  properties: {
+    remoteVirtualNetwork: {
+      id: frcVnet9.outputs.vnetId
+    }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, frcDefaultRouteTable)
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubfrc.name, frcDefaultRouteTable)
+          }
+        ]
+      }
+    }
+    enableInternetSecurity: true
+  }
+}
 // END OF PEERING TO VHUB
 
 ///////////////////////////////////////GW S2S/P2S/ER///////////////////////////////////////////
@@ -445,6 +469,17 @@ module frcVnet3 'vnet.bicep' = {
     addressPrefix: '192.168.14.0/28'
     addressSpace: '192.168.14.0/24'
     vnetName: 'frc-vnet3'
+    location: frLocation
+  }
+}
+
+//TEMP FOR TEST
+module frcVnet9 'vnet.bicep' = {
+  name: 'frc-vnet9'
+  params: {
+    addressPrefix: '192.168.15.0/28'
+    addressSpace: '192.168.15.0/24'
+    vnetName: 'frc-vnet9'
     location: frLocation
   }
 }

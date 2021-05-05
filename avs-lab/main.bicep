@@ -4,6 +4,10 @@ param adminPassword string
 @secure()
 param vpnPreSharedKey string
 param deployErVpn bool = false
+@secure()
+param erAuthKey string
+@secure()
+param erPrivatePeeringCircuitId string
 
 
 ///////////////////// AZURE RESOURCES //////////////////////////////////
@@ -52,18 +56,32 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
 }
 
 module ergw 'ergw.bicep' = if(deployErVpn) {
-  name: 'ergw'
+  name: 'er-gw'
   params: {
     gwSubnetId: vnet.properties.subnets[0].id
     location: location
+    name: 'er-gw'
   }
 }
+
+// resource erAvsConnection virtualnetwor = {
+//   name: 'er-gw/toAvs'
+//   parent: ergw
+//   properties: {
+//     authorizationKey: erAuthKey
+//     expressRouteCircuitPeering: {
+//       id: erPrivatePeeringCircuitId
+//     }
+//   }
+// }
+
 
 resource routeServer 'Microsoft.Network/virtualHubs@2020-11-01' = {
   name: 'vr'
   location: location
   properties: {
     sku: 'Standard'
+    allowBranchToBranchTraffic: true
   }
 }
 
