@@ -1,9 +1,11 @@
 param location string = 'francecentral'
+param deployCsr bool = false
+param simulateOnPremLocation bool = false
 @secure()
 param adminPassword string
 @secure()
 param vpnPreSharedKey string
-param deployErVpn bool = false
+param deployEr bool = false
 @secure()
 param erAuthKey string
 @secure()
@@ -55,7 +57,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   }
 }
 
-module ergw 'ergw.bicep' = if(deployErVpn) {
+module ergw 'ergw.bicep' = if(deployEr) {
   name: 'er-gw'
   params: {
     gwSubnetId: vnet.properties.subnets[0].id
@@ -95,7 +97,7 @@ resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@202
   }
 }
 
-module csr 'csr.bicep' = {
+module csr 'csr.bicep' = if (deployCsr) {
   name: 'csredge01'
   params: {
     adminPassword: adminPassword
@@ -110,7 +112,7 @@ module csr 'csr.bicep' = {
 
 ///////////////////// ONPREM RESOURCES //////////////////////////////////
 
-resource onPremVnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
+resource onPremVnet 'Microsoft.Network/virtualNetworks@2020-11-01' = if(simulateOnPremLocation) {
   name: 'onprem'
   location: location
   properties: {
@@ -136,7 +138,7 @@ resource onPremVnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   }
 }
 
-module vpnGw 'vpngw.bicep' = if(deployErVpn) {
+module vpnGw 'vpngw.bicep' = if(simulateOnPremLocation) {
   name: 'vpngw'
   params: {
     gwSubnetId: onPremVnet.properties.subnets[0].id
@@ -163,7 +165,7 @@ resource onPremLng 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
   }
 }
 
-resource onPremAzureConnection 'Microsoft.Network/connections@2020-11-01' = {
+resource onPremAzureConnection 'Microsoft.Network/connections@2020-11-01' = if(simulateOnPremLocation) {
   name: 'onPremToAzure'
   location: location
   properties: {
@@ -196,7 +198,7 @@ module azureVm 'vm.bicep' = {
   }
 }
 
-module onPremVm 'vm.bicep' = {
+module onPremVm 'vm.bicep' =  if(simulateOnPremLocation) {
   name: 'onPremVm'
   params: {
     location: location
