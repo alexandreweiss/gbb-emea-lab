@@ -88,7 +88,7 @@ This Lab is to demonstrate the publically documented scenario of vWan with an NV
 ## Requirement
 
 - Personnalize your public IP to be able to connect to NVA VM from Internet (it gets applied to the NVA VM NSG)
-It seats into the nic.bicep file : 
+It seats into the nic.bicep file :
 param mySourceIp string =
 
 - The deployEr switch help overcome waiting 30 min ER GW deployment every time you run deploy the bicep. Set it to true only the first time (still need to troubleshoot the issue as nothing is changed on the ER GW accross deployments)
