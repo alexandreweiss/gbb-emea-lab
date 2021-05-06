@@ -15,6 +15,27 @@ Onprem site is simulated by an Azure VPN Gateway and a VM all in Azure.
 
 ## Description
 
+### Requirements
+
+- You have to create a .json parameter file with the two variables below. This file should be kept outside of your repo as i'm doing to keep you secrets secure.
+
+Also you can override the default parameter of variables described earlier by adding them here with the expected value :
+
+```json
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminPassword": {
+            "value": "** admin password of CSR **"
+        },
+        "vpnPreShared": {
+            "value": "** VPN Pre shared key value **"
+        }
+    }
+}
+```
+
 ### Deployment
 
 You need to run the following after :
@@ -25,6 +46,15 @@ You need to run the following after :
 ```
 az deployment group create -n Deploy -g avs-lab --template-file main.bicep --parameters ..\..\..\secret\avs-lab.param.json <--- you have to update path to your param file.
 ```
+
+Once the deployment is done, you will have to configure :
+
+- Peering of your security equipment or the CSR with the router server using the [documentation here](https://docs.microsoft.com/azure/route-server/quickstart-configure-route-server-portal#set-up-peering-with-nva)
+
+- Branch to branch to enabled to allow route propagation between the security equipment, the route server and the Express Gateway. This will enable end to end routing from on-premises site to AVS based VMs
+
+- Configuration of T0/T1 and NVA on AVS is out of the scope of this lab.
+
 
 ### Variables
 
@@ -57,27 +87,6 @@ A virtual network called "onprem" is deployed if selected with :
 - GAtewaySUbnet : host the VPN Gateway connecting back to the routing equipment into the hub
 
 - default : the onpremVm is deployed in that subnet just for connectivity test pursposes from the onprem simulated location
-
-## Requirements
-
-- You have to create a .json parameter file with the two variables below. This file should be kept outside of your repo as i'm doing to keep you secrets secure.
-
-Also you can override the default parameter of variables described earlier by adding them here with the expected value :
-
-```json
-{
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "adminPassword": {
-            "value": "** admin password of CSR **"
-        },
-        "vpnPreShared": {
-            "value": "** VPN Pre shared key value **"
-        }
-    }
-}
-```
 
 # vwan-lab
 
