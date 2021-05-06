@@ -5,15 +5,53 @@ Place to host all GGB EMEA Labs artifacts
 
 # avs-lab
 
+![AVS Lab schema](/images/onprem-avs-rs.png)
+
 ## Intent
 
 This lab is to demonstrate usage of the Azure Route Server to propagate route learnt from an NVA (Cisco CSR 1000v with branch site connected via IPSec) to another remote branch connected via an Express Route Circuit
 
 Onprem site is simulated by an Azure VPN Gateway and a VM all in Azure.
 
+## Description
+
+### Variables
+
+- location : Azure region where to deploy this architecture
+
+- deployCsr : true/false. This is used if you want to deploy a test CSR in the hub to use it as a VPN gateway collecting IPSEC from remote location. It comes with no config. A sample is in the config directory that enables IPSEC + BGP
+
+- simulateOnPremLocation : true/false. if you want to deploy a vnet with a VPN gateway and a test VM to be connected to the Cisco CSR 1000v or any routing equipment that terminates VPN in the hub
+
+- deployEr : true/false. If  you want to deploy or not the Express Route Gateway.
+
+### HUB Virtual network in Azure
+
+Hub virtual network is devided into multiple subnets :
+
+- GatewaySubnet : host the Express Route gateway that is connected to AVS ER circuit
+
+- default : the hubVm is deployed in that subnet just for connectivity test pursposes from the hub
+
+- inside : it has the internal routing equipment NIC (in this example, the CSR 1000v inside NIC)
+
+- outside : it has the external routing equipment NIC (in this example, the CSR 1000v outside NIC). This NIC also has a public IP attached to receive remote branches IPSEC tunnels
+
+- RouteServerSubnet : this is the subnet reserved to Azure Route Server that must be a /27
+
+### ONPREM virtual network (to simulate onPrem location)
+
+A virtual network called "onprem" is deployed if selected with :
+
+- GAtewaySUbnet : host the VPN Gateway connecting back to the routing equipment into the hub
+
+- default : the onpremVm is deployed in that subnet just for connectivity test pursposes from the onprem simulated location
+
 ## Requirements
 
-- You have to create a .json parameter file with the two variables below. This file should be kept outside of your repo as i'm doing to keep you secrets secure :
+- You have to create a .json parameter file with the two variables below. This file should be kept outside of your repo as i'm doing to keep you secrets secure.
+
+Also you can override the default parameter of variables described earlier by adding them here with the expected value :
 
 ```json
 {
