@@ -15,6 +15,17 @@ Onprem site is simulated by an Azure VPN Gateway and a VM all in Azure.
 
 ## Description
 
+### Deployment
+
+You need to run the following after :
+
+- installing the latest version of az cli,
+- created the resource group where you want to deploy
+
+```
+az deployment group create -n Deploy -g avs-lab --template-file main.bicep --parameters ..\..\..\secret\avs-lab.param.json <--- you have to update path to your param file.
+```
+
 ### Variables
 
 - location : Azure region where to deploy this architecture
