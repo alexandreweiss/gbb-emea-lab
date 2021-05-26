@@ -3,8 +3,7 @@ param location string
 param subnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
-//param mySourceIp string = '176.179.0.0/16'
-param mySourceIp string = '90.103.116.130'
+param mySourceIp string
 param vmName string
 
 
@@ -88,24 +87,9 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
           sourcePortRange: '*'
         }
       }
-      {
-        name: 'allow-ipsec'
-        properties: {
-          access:'Allow'
-          description:'Allow IPSec from outside'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '500'
-          direction:'Inbound'
-          protocol: '*'
-          priority: 210
-          sourceAddressPrefix: '*'
-          sourcePortRange: '*'
-        }
-      }
     ]
   }
 }
 
 output nicId string = createPublicIpNsg ? '${nicPip.id}' : '${nicNoPip.id}'
 output nicPrivateIp string = createPublicIpNsg ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}' 
-output nicPublicIp string = createPublicIpNsg ? publicIp.properties.ipAddress : '' 

@@ -1,6 +1,7 @@
 param location string = 'francecentral'
 param deployCsr bool = false
-param simulateOnPremLocation bool = false
+param deploySpokeCsr bool = true
+param simulateOnPremLocation bool = true
 @secure()
 param adminPassword string
 @secure()
@@ -13,7 +14,7 @@ param erPrivatePeeringCircuitId string
 
 
 ///////////////////// AZURE RESOURCES //////////////////////////////////
-resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
+resource hub 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   name: 'hub'
   location: location
   properties: {
@@ -57,10 +58,110 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-11-01' = {
   }
 }
 
+resource spoke 'Microsoft.Network/virtualNetworks@2020-11-01' = {
+  name: 'spoke'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '172.24.0.0/24'
+      ]
+    }
+    subnets: [
+      {
+        name: 'default'
+        properties: {
+          addressPrefix: '172.24.0.0/28'
+        }
+      }
+    ]
+  }
+}
+
+resource nva 'Microsoft.Network/virtualNetworks@2020-11-01' = {
+  name: 'nva'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '172.25.0.0/24'
+      ]
+    }
+    subnets: [
+      {
+        name: 'default'
+        properties: {
+          addressPrefix: '172.25.0.0/28'
+        }
+      }
+      {
+        name: 'inside'
+        properties: {
+          addressPrefix: '172.25.0.32/28'
+        }
+      }
+      {
+        name: 'outside'
+        properties: {
+          addressPrefix: '172.25.0.48/28'
+        }
+      }
+    ]
+  }
+}
+
+resource nvaHubPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: 'nvaToHub'
+  parent: nva
+  properties: {
+    remoteVirtualNetwork: {
+      id: hub.id
+    }
+  }
+}
+
+resource hubNvaPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: 'hubToNva'
+  parent: hub
+  properties: {
+    remoteVirtualNetwork: {
+      id: nva.id
+    }
+  }
+}
+
+resource spokeHubPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: 'spokeToHub'
+  parent: spoke
+  properties: {
+    remoteVirtualNetwork: {
+      id: hub.id
+    }
+    allowForwardedTraffic: true
+    useRemoteGateways: true
+  }
+  dependsOn: [
+    [
+      hubSpokePeering
+    ]
+  ]
+}
+
+resource hubSpokePeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: 'hubToSpoke'
+  parent: hub
+  properties: {
+    remoteVirtualNetwork: {
+      id: spoke.id
+    }
+    allowGatewayTransit: true
+  }
+}
+
 module ergw 'ergw.bicep' = if(deployEr) {
   name: 'er-gw'
   params: {
-    gwSubnetId: vnet.properties.subnets[0].id
+    gwSubnetId: hub.properties.subnets[0].id
     location: location
     name: 'er-gw'
   }
@@ -92,7 +193,7 @@ resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@202
   parent: routeServer
   properties: {
     subnet: {
-      id: vnet.properties.subnets[4].id
+      id: hub.properties.subnets[4].id
     }
   }
 }
@@ -105,8 +206,21 @@ module csr 'csr.bicep' = if (deployCsr) {
     enableForwarding: true
     location: location
     vmName: 'csredge'
-    insideSubnetId: vnet.properties.subnets[2].id
-    outsideSubnetId: vnet.properties.subnets[3].id
+    insideSubnetId: nva.properties.subnets[2].id
+    outsideSubnetId: nva.properties.subnets[3].id
+  }
+}
+
+module spokeCsr 'csr.bicep' = if (deploySpokeCsr) {
+  name: 'csredge02'
+  params: {
+    adminPassword: adminPassword
+    createPublicIpNsg: true
+    enableForwarding: true
+    location: location
+    vmName: 'csredge02'
+    insideSubnetId: nva.properties.subnets[1].id
+    outsideSubnetId: nva.properties.subnets[2].id
   }
 }
 
@@ -156,10 +270,29 @@ resource onPremLng 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
       bgpPeeringAddress: '192.168.1.1'
       peerWeight: 0
     }
-    gatewayIpAddress: csr.outputs.nicOutsidePublicIp
+    //gatewayIpAddress: csr.outputs.nicOutsidePublicIp
+    gatewayIpAddress: '1.1.1.1'
     localNetworkAddressSpace: {
       addressPrefixes: [
         '192.168.1.1/32'
+      ]
+    }
+  }
+}
+
+resource sdWanLng 'Microsoft.Network/localNetworkGateways@2020-11-01' = {
+  name: 'toSdwan'
+  location: location
+  properties: {
+    bgpSettings: {
+      asn: 64630
+      bgpPeeringAddress: '192.168.2.1'
+      peerWeight: 0
+    }
+    gatewayIpAddress: spokeCsr.outputs.nicOutsidePublicIp
+    localNetworkAddressSpace: {
+      addressPrefixes: [
+        '192.168.2.1/32'
       ]
     }
   }
@@ -189,11 +322,36 @@ resource onPremAzureConnection 'Microsoft.Network/connections@2020-11-01' = if(s
   }
 }
 
+
+resource onPremSdwanConnection 'Microsoft.Network/connections@2020-11-01' = if(simulateOnPremLocation) {
+  name: 'onPremToSdwan'
+  location: location
+  properties: {
+    connectionType: 'IPsec'
+    connectionProtocol: 'IKEv2'
+    connectionMode: 'Default'
+    enableBgp: true
+    sharedKey: vpnPreSharedKey
+    virtualNetworkGateway1: {
+      id: vpnGw.outputs.vpnGwId
+      properties:{
+        
+      }
+    }
+    localNetworkGateway2: {
+      id: sdWanLng.id
+      properties: {
+        
+      }
+    }
+  }
+}
+
 module azureVm 'vm.bicep' = {
   name: 'hubVm'
   params: {
     location: location
-    subnetId: vnet.properties.subnets[1].id
+    subnetId: hub.properties.subnets[1].id
     vmName: 'hubVm'
   }
 }
@@ -204,5 +362,15 @@ module onPremVm 'vm.bicep' =  if(simulateOnPremLocation) {
     location: location
     subnetId: onPremVnet.properties.subnets[1].id
     vmName: 'onPremVm'
+  }
+}
+
+
+module spokeVm 'vm.bicep' = {
+  name: 'spokevm'
+  params: {
+    location: location
+    subnetId: spoke.properties.subnets[0].id
+    vmName: 'spokevm'
   }
 }
