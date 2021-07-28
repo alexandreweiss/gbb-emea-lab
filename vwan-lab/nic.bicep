@@ -3,8 +3,7 @@ param location string
 param subnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
-//param mySourceIp string = '176.179.0.0/16'
-param mySourceIp string = '90.103.116.130'
+param mySourceIp string
 param vmName string
 
 
@@ -85,6 +84,34 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
           protocol:'Tcp'
           priority: 200
           sourceAddressPrefix: mySourceIp
+          sourcePortRange: '*'
+        }
+      }
+      {
+        name: 'deny-from-internet'
+        properties: {
+          access:'Deny'
+          description:'Deny_From_Internet'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+          direction:'Inbound'
+          protocol:'*'
+          priority: 210
+          sourceAddressPrefix: 'Internet'
+          sourcePortRange: '*'
+        }
+      }
+      {
+        name: 'allow-all-vnet-vnet'
+        properties: {
+          access:'Allow'
+          description:'allow all vnets'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+          direction:'Inbound'
+          protocol:'*'
+          priority: 220
+          sourceAddressPrefix: '*'
           sourcePortRange: '*'
         }
       }

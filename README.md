@@ -94,6 +94,26 @@ A virtual network called "onprem" is deployed if selected with :
 
 This Lab is to demonstrate the publically documented scenario of vWan with an NVA on a spoke along with the BICEP langage to deploy
 
+## Parameters
+
+Using the below parameter, you can choose to add component :
+
+# param deployEr bool = false 
+
+Set to true if you want to deploy ER Gateway and circuit connectivity (you must already have an ER Circuit available with an authorization key)
+
+# param deployFrcVhub2 bool = false
+
+Set to true if you want to deploy a second vHub in Frc to have the 2 vHub in the same region scenario
+
+# param deployFrcEr2 bool = false
+
+Set to true if you want to deploy an ER Gateway in the second Frc vHub
+
+# param deployWeSecuredHub bool = false
+
+Set to true if you want to deploy an AzFw and a secured vHub in West Europe to cover secured hub scenario
+
 ## Requirement
 
 - Personnalize your public IP to be able to connect to NVA VM from Internet (it gets applied to the NVA VM NSG)

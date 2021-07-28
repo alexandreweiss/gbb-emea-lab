@@ -1,7 +1,8 @@
 param location string = 'francecentral'
-param deployCsr bool = false
+param deployCsr bool = true
 param deploySpokeCsr bool = true
 param simulateOnPremLocation bool = true
+param mySourceIp string = '90.103.196.31'
 @secure()
 param adminPassword string
 @secure()
@@ -206,8 +207,9 @@ module csr 'csr.bicep' = if (deployCsr) {
     enableForwarding: true
     location: location
     vmName: 'csredge'
-    insideSubnetId: nva.properties.subnets[2].id
-    outsideSubnetId: nva.properties.subnets[3].id
+    insideSubnetId: hub.properties.subnets[2].id
+    outsideSubnetId: hub.properties.subnets[3].id
+    mySourceIp: mySourceIp
   }
 }
 
@@ -221,6 +223,7 @@ module spokeCsr 'csr.bicep' = if (deploySpokeCsr) {
     vmName: 'csredge02'
     insideSubnetId: nva.properties.subnets[1].id
     outsideSubnetId: nva.properties.subnets[2].id
+    mySourceIp: mySourceIp
   }
 }
 
@@ -347,12 +350,13 @@ resource onPremSdwanConnection 'Microsoft.Network/connections@2020-11-01' = if(s
   }
 }
 
-module azureVm 'vm.bicep' = {
+module hubVm 'vm.bicep' = {
   name: 'hubVm'
   params: {
     location: location
     subnetId: hub.properties.subnets[1].id
     vmName: 'hubVm'
+    mySourceIp: mySourceIp
   }
 }
 
@@ -362,6 +366,7 @@ module onPremVm 'vm.bicep' =  if(simulateOnPremLocation) {
     location: location
     subnetId: onPremVnet.properties.subnets[1].id
     vmName: 'onPremVm'
+    mySourceIp: mySourceIp
   }
 }
 
@@ -372,5 +377,6 @@ module spokeVm 'vm.bicep' = {
     location: location
     subnetId: spoke.properties.subnets[0].id
     vmName: 'spokevm'
+    mySourceIp: mySourceIp
   }
 }

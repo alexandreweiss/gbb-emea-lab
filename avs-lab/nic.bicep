@@ -4,7 +4,7 @@ param subnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
 //param mySourceIp string = '176.179.0.0/16'
-param mySourceIp string = '90.103.116.130'
+param mySourceIp string
 param vmName string
 
 

@@ -7,6 +7,7 @@ param createPublicIpNsg bool = false
 param enableCloudInit bool = false
 @secure()
 param adminPassword string
+param mySourceIp string
 
 module nicInside 'nic.bicep' = {
   name: '${vmName}-inside'
@@ -16,6 +17,7 @@ module nicInside 'nic.bicep' = {
     subnetId: insideSubnetId
     enableForwarding: enableForwarding
     vmName: vmName
+    mySourceIp: mySourceIp
   }
 }
 
@@ -28,6 +30,7 @@ module nicOutside 'nic.bicep' = {
     enableForwarding: enableForwarding
     createPublicIpNsg: createPublicIpNsg
     vmName: vmName
+    mySourceIp: mySourceIp
   }
 }
 

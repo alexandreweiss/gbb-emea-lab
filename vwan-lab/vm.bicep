@@ -4,6 +4,7 @@ param subnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param enableCloudInit bool = false
+param mySourceIp string
 
 module nic 'nic.bicep' = {
   name: '${vmName}-nic'
@@ -14,6 +15,7 @@ module nic 'nic.bicep' = {
     enableForwarding: enableForwarding
     createPublicIpNsg: createPublicIpNsg
     vmName: vmName
+    mySourceIp: mySourceIp
   }
 }
 
@@ -67,6 +69,11 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
           id: nic.outputs.nicId
         }
       ]
+    }
+    diagnosticsProfile: {
+      bootDiagnostics: {
+        enabled: true
+      }
     }
   }
 }
