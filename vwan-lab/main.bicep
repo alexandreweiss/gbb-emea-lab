@@ -495,8 +495,11 @@ module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = {
     location: frLocation
     vHubId: frcVhub.id
     vWanId: vwan.id
-    site1Asn: 64650
-    site1Ip: '90.103.196.31'
+    site1Asn: 65510
+    site1Ip: '81.49.33.231'
+    site1BpgIp: '192.168.17.1'
+    site1Bw: 50
+    site1Name: 'StellaPlage'
   }
   
 }
@@ -584,8 +587,8 @@ module frcVnet3 'vnet.bicep' = {
 module frcVnet9 'vnet.bicep' = {
   name: 'frc-vnet9'
   params: {
-    addressPrefix: '192.168.15.0/28'
-    addressSpace: '192.168.15.0/24'
+    addressPrefix: '192.168.19.0/28'
+    addressSpace: '192.168.19.0/24'
     vnetName: 'frc-vnet9'
     location: frLocation
   }
@@ -898,6 +901,17 @@ module frcVmVnet3Nw '../_modules/nwext.bicep' = {
     vmName: frcVmVnet3.name
   }
   
+}
+
+// FRC - NON NVA VM IN VNET PEERED TO VHUB FRC WITH DEFAULT ROUTE TABLE
+module frcVmVnet9 'vm.bicep' = {
+  name: 'frc-vm9'
+  params: {
+    location: frLocation
+    subnetId: frcVnet9.outputs.subnetId
+    vmName: 'frc-vm9'
+    mySourceIp: mySourceIp
+  }
 }
 
 // UKS - NON NVA VM IN SPOKE0 PEERED TO VHUB UKS

@@ -1,23 +1,55 @@
 param vmName string
 param location string
-param subnetId string
+param nic0SubnetId string
+param nic1SubnetId string
+//param nic2SubnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param enableCloudInit bool = false
+param nic0BackendPoolId string
+param nic1BackendPoolId string
 param mySourceIp string = '10.0.0.1'
 
-module nic 'nic.bicep' = {
-  name: '${vmName}-nic'
+module nic0 'nic4lb.bicep' = {
+  name: '${vmName}-nic0'
   params: {
     location: location
-    nicName: '${vmName}-nic'
-    subnetId: subnetId
+    nicName: '${vmName}-nic0'
+    subnetId: nic0SubnetId
     enableForwarding: enableForwarding
     createPublicIpNsg: createPublicIpNsg
     vmName: vmName
     mySourceIp: mySourceIp
+    backendPoolId: nic0BackendPoolId
   }
 }
+
+module nic1 'nic4lb.bicep' = {
+  name: '${vmName}-nic1'
+  params: {
+    location: location
+    nicName: '${vmName}-nic1'
+    subnetId: nic1SubnetId
+    enableForwarding: enableForwarding
+    createPublicIpNsg: createPublicIpNsg
+    vmName: vmName
+    mySourceIp: mySourceIp
+    backendPoolId: nic1BackendPoolId
+  }
+}
+
+// module nic2 '../../_modules/nic.bicep' = {
+//   name: '${vmName}-nic2'
+//   params: {
+//     location: location
+//     nicName: '${vmName}-nic2'
+//     subnetId: nic2SubnetId
+//     enableForwarding: enableForwarding
+//     createPublicIpNsg: createPublicIpNsg
+//     vmName: vmName
+//     mySourceIp: mySourceIp
+//   }
+// }
 
 resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   name: vmName
@@ -45,7 +77,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
       computerName: vmName
     }
     hardwareProfile: {
-      vmSize: 'Standard_B1s'
+      vmSize: 'Standard_B2s'
     }
     storageProfile: {
       imageReference: {
@@ -71,8 +103,20 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
           properties: {
             primary:true
           }
-          id: nic.outputs.nicId
+          id: nic0.outputs.nicId
         }
+        {
+          properties: {
+            primary:false
+          }
+          id: nic1.outputs.nicId
+        }
+        // {
+        //   properties: {
+        //     primary:false
+        //   }
+        //   id: nic2.outputs.nicId
+        // }
       ]
     }
   }
@@ -95,4 +139,6 @@ resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
   }
 }
 
-output nicPrivateIp string = nic.outputs.nicPrivateIp
+output nic0PrivateIp string = nic0.outputs.nicPrivateIp
+output nic1PrivateIp string = nic1.outputs.nicPrivateIp
+// output nic2PrivateIp string = nic2.outputs.nicPrivateIp
