@@ -110,6 +110,27 @@ resource peSa 'Microsoft.Network/privateEndpoints@2021-02-01' = {
   }
 }
 
+resource pe2Sa 'Microsoft.Network/privateEndpoints@2021-02-01' = {
+  name: 'pesapl002'
+  location: location
+  properties: {
+    subnet: {
+      id: hub.outputs.subnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'pesapl002'
+        properties: {
+          privateLinkServiceId: sa.outputs.id
+          groupIds: [
+            'blob'
+          ]
+        }
+      }
+    ]
+  }
+}
+
 module spokeVm '../_modules/vm.bicep' = {
   name: 'spokeVm'
   params: {
