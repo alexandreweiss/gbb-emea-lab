@@ -1,8 +1,9 @@
 param fwName string
 param location string
 param virtualHubId string
+param fwPolicyId string
 
-resource azfwWe 'Microsoft.Network/azureFirewalls@2020-11-01' = {
+resource azfw 'Microsoft.Network/azureFirewalls@2020-11-01' = {
   name: fwName
   location: location
   properties: {
@@ -19,17 +20,8 @@ resource azfwWe 'Microsoft.Network/azureFirewalls@2020-11-01' = {
       id: virtualHubId
     }
     firewallPolicy: {
-      id: fwPolicy.id
+      id: fwPolicyId
     }
   
   }
-}
-
-resource fwPolicy 'Microsoft.Network/firewallPolicies@2020-11-01' = {
-  name: 'defaultPolicy'
-  location: location
-  properties: {
-    threatIntelMode: 'Alert'
-  }
-  
 }

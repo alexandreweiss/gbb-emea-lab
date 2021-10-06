@@ -5,6 +5,40 @@ param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param enableCloudInit bool = false
 param mySourceIp string = '10.0.0.1'
+param lbBackendPoolId string = 'no'
+
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param autoShutdownStatus string = 'Enabled'
+
+@allowed([
+  'desktop'
+  'server'
+])
+param osType string = 'server'
+
+// var osServer = {
+//   publisher: 'MicrosoftWindowsServer'
+//   offer: 'WindowsServer'
+//   sku: '2019-Datacenter'
+//   version: 'latest'
+// }
+
+var osServer = {
+  offer: 'UbuntuServer'
+  publisher: 'Canonical'
+  sku: '18.04-LTS'
+  version: 'latest'
+}
+
+var osDesktop = {
+  publisher: 'MicrosoftWindowsDesktop'
+  offer: 'Windows-10'
+  sku: '20h2-ent'
+  version: 'latest'
+}
 
 module nic 'nic.bicep' = {
   name: '${vmName}-nic'
@@ -16,6 +50,7 @@ module nic 'nic.bicep' = {
     createPublicIpNsg: createPublicIpNsg
     vmName: vmName
     mySourceIp: mySourceIp
+    lbBackendPoolId: lbBackendPoolId
   }
 }
 
@@ -48,12 +83,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
       vmSize: 'Standard_B1s'
     }
     storageProfile: {
-      imageReference: {
-        offer: 'UbuntuServer'
-        publisher: 'Canonical'
-        sku: '18.04-LTS'
-        version: 'latest'
-      }
+      imageReference: osType == 'desktop' ? osDesktop : osServer
       osDisk: {
         createOption:'FromImage'
         diskSizeGB: 30
@@ -62,7 +92,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
           storageAccountType:'Premium_LRS'
         }
         name: '${vmName}-osDisk'
-        osType:'Linux'
+        osType: osType == 'desktop' ? 'Windows' : 'Linux'
       }
     }
     networkProfile: {
@@ -82,7 +112,7 @@ resource autoShutdown 'Microsoft.DevTestLab/schedules@2018-09-15' = {
   name: 'shutdown-computevm-${vmName}'
   location: location
   properties: {
-    status:'Enabled'
+    status: autoShutdownStatus
     dailyRecurrence:{
       time: '2100'
     }

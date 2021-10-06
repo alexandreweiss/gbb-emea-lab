@@ -3,6 +3,11 @@ param addressPrefix string
 param addressSpace string
 param location string
 param routeTableId string = 'non'
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param networkPoliciesState string = 'Enabled'
 
 var routeTableVar = {
   routeTable: {
@@ -12,6 +17,7 @@ var routeTableVar = {
 
 var nonRouteTable = {
   addressPrefix: addressPrefix
+  privateEndpointNetworkPolicies: networkPoliciesState
 }
 
 resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {

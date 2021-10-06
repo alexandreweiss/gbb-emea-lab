@@ -5,6 +5,7 @@ param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param mySourceIp string
 param vmName string
+param lbBackendPoolId string = 'no'
 
 
 resource nicPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(createPublicIpNsg) {
@@ -24,6 +25,11 @@ resource nicPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(createPubl
           publicIPAddress: {
             id: publicIp.id
           }
+          loadBalancerBackendAddressPools: [
+            {
+              id: lbBackendPoolId == 'no' ? null : lbBackendPoolId
+            }
+          ]
         }
       }
     ]
