@@ -11,6 +11,7 @@ module hub '../_modules/vnet.bicep' = {
     addressSpace: '10.0.0.0/24'
     location: location
     vnetName: 'hub'
+    networkPoliciesState: 'Disabled'
   }
 }
 
