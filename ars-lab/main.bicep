@@ -117,6 +117,15 @@ module spoke2Vm '../_modules/vm.bicep' = {
   }
 }
 
+module hubVm '../_modules/vm.bicep' = {
+  name: 'hubVm'
+  params: {
+    location: location
+    subnetId: hub.outputs.subnets[2].id
+    vmName: 'hubVm'
+  }
+}
+
 module bastion '../_modules/bastion.bicep' = {
   name: 'bastion'
   dependsOn: [
