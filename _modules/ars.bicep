@@ -2,10 +2,10 @@ param location string
 param name string
 param enableB2b bool = true
 param subnetId string
-param peer1Asn int
-param peer1Ip string
-param peer2Asn int
-param peer2Ip string
+param peer1Asn int = 0
+param peer1Ip string = 'NA'
+param peer2Asn int = 0
+param peer2Ip string = 'NA'
 
 resource routeServer 'Microsoft.Network/virtualHubs@2021-02-01' = {
   name: name
@@ -31,7 +31,7 @@ resource routeServerIpConfig 'Microsoft.Network/virtualHubs/ipConfigurations@202
   }
 }
 
-resource routeServerPeer1 'Microsoft.Network/virtualHubs/bgpConnections@2021-02-01' = {
+resource routeServerPeer1 'Microsoft.Network/virtualHubs/bgpConnections@2021-02-01' = if(peer1Asn != 0) {
   dependsOn: [
     routeServerIpConfig
   ]
@@ -42,7 +42,7 @@ resource routeServerPeer1 'Microsoft.Network/virtualHubs/bgpConnections@2021-02-
   }
 }
 
-resource routeServerPeer2 'Microsoft.Network/virtualHubs/bgpConnections@2021-02-01' = {
+resource routeServerPeer2 'Microsoft.Network/virtualHubs/bgpConnections@2021-02-01' = if(peer2Asn != 0) {
   dependsOn: [
     routeServerPeer1
   ]

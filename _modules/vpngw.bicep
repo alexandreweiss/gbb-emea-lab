@@ -1,6 +1,7 @@
 param location string
 param gwSubnetId string
 param asn int
+param sku string = 'Standard'
 
 resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
   name: 'vpn-gw'
@@ -8,8 +9,8 @@ resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
   properties: {
     gatewayType: 'Vpn'
     sku: {
-      name: 'Standard'
-      tier: 'Standard'
+      name: sku
+      tier: sku
     }
     ipConfigurations: [
       {
@@ -23,6 +24,17 @@ resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
           }
         }
       }
+      {
+        name: 'ipconfig2'
+        properties: {
+          subnet: {
+            id: gwSubnetId
+          }
+          publicIPAddress: {
+            id: publicIp2.id
+          }
+        }
+      }
     ]
     bgpSettings: {
       asn: asn
@@ -30,11 +42,24 @@ resource vpnGateway 'Microsoft.Network/virtualNetworkGateways@2020-11-01' = {
     enableBgp: true
     vpnType: 'RouteBased'
     vpnGatewayGeneration: 'Generation1'
+    activeActive: true
   }
 }
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2020-08-01' = {
   name: 'vpngw-pip'
+  location: location
+  sku: {
+    name:'Basic'
+    tier:'Regional'
+  }
+  properties: {
+   publicIPAllocationMethod: 'Dynamic'
+  }
+}
+
+resource publicIp2 'Microsoft.Network/publicIPAddresses@2020-08-01' = {
+  name: 'vpngw-pip-2'
   location: location
   sku: {
     name:'Basic'
