@@ -2,20 +2,22 @@ param frLocation string = 'francecentral'
 param uksLocation string = 'uksouth'
 param weLocation string = 'westeurope'
 param deployEr bool = false
+param deployErWe bool = false
 param deployVmNwExt bool = false
 
 // Deploy a second FRC vHub and ER GW
-param deployFrc2Vhub bool = true
+param deployFrc2Vhub bool = false
 param deployFrcEr2 bool = false
 
-// Deploy a secured hub in WE
+// Deploy a secured hub in WE + VPN
 param deployWeSecuredHub bool = false
+param deployWeVpn bool = true
 
 // Make FRC and FRC2 secured
-param doFrcSecuredHub bool = true
-param doFrc2SecuredHub bool = true
+param doFrcSecuredHub bool = false
+param doFrc2SecuredHub bool = false
 
-param mySourceIp string = '81.49.33.231'
+param mySourceIp string = '81.49.33.216'
 
 // Intercloud ER Circuit
 @secure()
@@ -23,11 +25,19 @@ param erAuthKey string
 @secure()
 param erCircuitId string
 
+// VPN PSK
+@secure()
+param psk string
+
 // AVS Ravi ER Circuit
 @secure()
 param erAuthKeyAvs string
 @secure()
 param erCircuitIdAvs string
+
+// Windows VM admin password
+@secure()
+param adminPassword string
 
 var frcDefaultRouteTable = 'defaultRouteTable'
 var uksDefaultRouteTable = 'defaultRouteTable'
@@ -134,8 +144,7 @@ resource frc2Vhub 'Microsoft.Network/virtualHubs@2020-08-01' = if(deployFrc2Vhub
 //////////////////////////////////////ROUTE TABLES////////////////////////////////////////////
 //// FRC ///
 resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
-  name: 'rtNva'
-  parent: frcVhub
+  name: '${frcVhub.name}/rtNva'
   properties: {
     routes: [
     ]
@@ -146,8 +155,7 @@ resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
 }
 
 resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
-  name: 'rtVnet'
-  parent: frcVhub
+  name: '${frcVhub.name}/rtVnet'
   dependsOn: [
     [
       frcVhubErGw
@@ -160,7 +168,7 @@ resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
     routes: [
       {
         destinations: [
-          '192.168.2.0/24'
+          '192.168.61.0/24'
         ]
         destinationType: 'CIDR'
         name: 'toOnPrem'
@@ -221,8 +229,7 @@ resource frcRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
 
 //vHub default route table
 resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
-  name: frcDefaultRouteTable
-  parent: frcVhub
+  name: '${frcVhub.name}/${frcDefaultRouteTable}'
   dependsOn: [
     [
       frcVhubErGw
@@ -279,8 +286,7 @@ resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' 
 /////// UKS ROUTE TABLE
 
 resource uksRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
-  name: 'rtNva'
-  parent: vhubuks
+  name: '${vhubuks.name}/rtNva'
   properties: {
     routes: [
     ]
@@ -291,8 +297,7 @@ resource uksRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
 }
 
 resource uksRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
-  name: 'rtVnet'
-  parent: vhubuks
+  name: '${vhubuks.name}/rtVnet'
   dependsOn: [
     [
       uksVnet2Connection
@@ -357,8 +362,7 @@ resource uksRtVnet 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
 
 //vHub default route table
 resource uksRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
-  name: uksDefaultRouteTable
-  parent: vhubuks
+  name: '${vhubuks.name}/${uksDefaultRouteTable}'
   dependsOn: [
     [
       uksVnet2Connection
@@ -566,6 +570,21 @@ resource frcVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(de
   }
 }
 
+resource weVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(deployErWe) {
+  name: 'gw-we-er'
+  location: weLocation
+  properties: {
+    virtualHub: {
+      id: weVhub.id
+    }
+    autoScaleConfiguration: {
+      bounds: {
+        min: 1
+      }
+    }
+  }
+}
+
 module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = {
   name: 'gw-frc-vpn'
   params: {
@@ -573,14 +592,45 @@ module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = {
     gwName: 'gw-frc-vpn'
     location: frLocation
     vHubId: frcVhub.id
-    vWanId: vwan.id
-    site1Asn: 65510
-    site1Ip: '81.49.33.231'
-    site1BpgIp: '192.168.17.1'
-    site1Bw: 50
-    site1Name: 'StellaPlage'
   }
-  
+}
+
+module weVhubVpnGw '../_modules/vwanvpngw.bicep' = if(deployWeVpn) {
+  name: 'gw-we-vpn'
+  params: {
+    asn: 65515
+    gwName: 'gw-we-vpn'
+    location: weLocation
+    vHubId: weVhub.id
+  }
+}
+
+module weVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployWeVpn) {
+  name: 'Longvilliers'
+  params: {
+    asn: 65510
+    bgpIp: '192.168.17.1'
+    location: weLocation
+    name: 'Longvilliers'
+    publicIp: 'ferme.ananableu.fr'
+    vWanId: vwan.id
+    vpnGatewayName: weVhubVpnGw.name
+    psk: psk
+  }
+}
+
+module frcVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployWeVpn) {
+  name: 'Longvilliers-frc'
+  params: {
+    asn: 65510
+    bgpIp: '192.168.17.1'
+    location: frLocation
+    name: 'Longvilliers-frc'
+    publicIp: 'ferme.ananableu.fr'
+    vWanId: vwan.id
+    vpnGatewayName: frcVhubVpnGw.name
+    psk: psk
+  }
 }
 
 resource frcVhubErGw2 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(deployFrcEr2) {
@@ -698,7 +748,6 @@ module frcVnet9 'vnet.bicep' = {
 
 resource vnet4Vnet7Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${frcVnet4.name}/vnet4toVnet7'
-  parent: frcVnet4
   properties: {
     remoteVirtualNetwork: {
       id: frcVnet7.outputs.vnetId
@@ -708,7 +757,6 @@ resource vnet4Vnet7Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
 
 resource vnet7Vnet4Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${frcVnet7.name}/vnet7toVnet4'
-  parent: frcVnet7
   properties: {
     remoteVirtualNetwork: {
       id: frcVnet4.outputs.vnetId
@@ -718,7 +766,6 @@ resource vnet7Vnet4Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
 
 resource vnet4Vnet8Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${frcVnet4.name}/vnet4toVnet8'
-  parent: frcVnet4
   properties: {
     remoteVirtualNetwork: {
       id: frcVnet8.outputs.vnetId
@@ -728,7 +775,6 @@ resource vnet4Vnet8Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
 
 resource vnet8Vnet4Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${frcVnet8.name}/vnet8toVnet4'
-  parent: frcVnet8
   properties: {
     remoteVirtualNetwork: {
       id: frcVnet4.outputs.vnetId
@@ -822,7 +868,6 @@ module uksVnet1 'vnet.bicep' = {
 
 resource uksVnet2Vnet5Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${uksVnet2.name}/vnet2toVnet5'
-  parent: uksVnet2
   properties: {
     remoteVirtualNetwork: {
       id: uksVnet5.outputs.vnetId
@@ -832,7 +877,6 @@ resource uksVnet2Vnet5Peering 'Microsoft.Network/virtualNetworks/virtualNetworkP
 
 resource uksVnet5Vnet2Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${uksVnet5.name}/vnet5toVnet2'
-  parent: uksVnet5
   properties: {
     remoteVirtualNetwork: {
       id: uksVnet2.outputs.vnetId
@@ -842,7 +886,6 @@ resource uksVnet5Vnet2Peering 'Microsoft.Network/virtualNetworks/virtualNetworkP
 
 resource uksVnet2Vnet6Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${uksVnet2.name}/vnet2ToVnet6'
-  parent: uksVnet2
   properties: {
     remoteVirtualNetwork: {
       id: uksVnet6.outputs.vnetId
@@ -852,7 +895,6 @@ resource uksVnet2Vnet6Peering 'Microsoft.Network/virtualNetworks/virtualNetworkP
 
 resource uksVnet6Vnet2Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${uksVnet6.name}/vnet6toVnet2'
-  parent: uksVnet6
   properties: {
     remoteVirtualNetwork: {
       id: uksVnet2.outputs.vnetId
@@ -917,6 +959,7 @@ resource uksVnet2Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     }
   }
 }
+
 
 // UKS - NON NVA VNET to VWAN UKS HUB CONNECTION
 resource uksVnet1Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = {
@@ -1025,6 +1068,7 @@ module frcWinVmVnet9 '../_modules/vm.bicep' = {
     vmName: 'frc-vm9-win'
     mySourceIp: mySourceIp
     osType: 'desktop'
+    adminPassword: adminPassword
   }
 }
 

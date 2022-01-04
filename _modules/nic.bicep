@@ -7,6 +7,22 @@ param mySourceIp string
 param vmName string
 param lbBackendPoolId string = 'no'
 
+var lbBackend = {
+  loadBalancerBackendAddressPools: {
+    id: lbBackendPoolId
+  }
+}
+
+var nicProperties = {
+  primary:true
+  privateIPAllocationMethod:'Dynamic'
+  subnet: {
+    id: subnetId
+  }
+  publicIPAddress: {
+    id: publicIp.id
+  }
+}
 
 resource nicPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(createPublicIpNsg) {
   name: '${nicName}-public'
@@ -16,21 +32,7 @@ resource nicPip 'Microsoft.Network/networkInterfaces@2020-08-01' = if(createPubl
     ipConfigurations: [
       {
         name: 'ipconfig0'
-        properties: {
-          primary:true
-          privateIPAllocationMethod:'Dynamic'
-          subnet: {
-            id: subnetId
-          }
-          publicIPAddress: {
-            id: publicIp.id
-          }
-          loadBalancerBackendAddressPools: [
-            {
-              id: lbBackendPoolId == 'no' ? null : lbBackendPoolId
-            }
-          ]
-        }
+        properties: lbBackendPoolId == 'no' ? nicProperties : union(nicProperties,lbBackend)
       }
     ]
     networkSecurityGroup: {
@@ -98,4 +100,4 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
 }
 
 output nicId string = createPublicIpNsg ? '${nicPip.id}' : '${nicNoPip.id}'
-output nicPrivateIp string = createPublicIpNsg ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}' 
+output nicPrivateIp string = createPublicIpNsg ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}'

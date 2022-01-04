@@ -8,6 +8,9 @@ param cloudInitValue string = 'I2luY2x1ZGUKaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlb
 param mySourceIp string = '10.0.0.1'
 param lbBackendPoolId string = 'no'
 
+@secure()
+param adminPassword string = 'NA'
+
 @allowed([
   'Enabled'
   'Disabled'
@@ -41,6 +44,30 @@ var osDesktop = {
   version: 'latest'
 }
 
+var winOsProfile = {
+  customData: enableCloudInit ? cloudInitValue : json('null')
+  adminUsername: 'admin-lab'
+  adminPassword: adminPassword
+  computerName: vmName
+}
+
+var linuxOsProfile = {
+  customData: enableCloudInit ? cloudInitValue : json('null')
+  adminUsername: 'admin-lab'
+  linuxConfiguration: {
+    disablePasswordAuthentication: true
+    ssh: {
+      publicKeys: [
+        {
+          path: '/home/admin-lab/.ssh/authorized_keys'
+          keyData: 'ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQBsUy8OllCkhpOU4FplN1b7ypawC/8QM++3gb9EbqZHCJnJdTNhk/0QZVvGsPvWeSazsShgX2TdEMMdDFscWDdAfnoB+hyjhFyWaOfKXFdzafib3HrO0rGUPqW42V6d0N2V5rh23ZFZGX5Bp75KEFnrFgGY1axCebvMvStGzXXffole1sCt0SKbvFptc/MT/ZVSqT0i0ugS0dVXsb4kuo4qnNRUAqvunljDL5oS3ZT7bQtjAvcw+IyYF6Ka9pGc4EuNaYZ2YuaxMyMOKYoMq4Qz8Qk5oF34ATGCPC0SdAgtAByNblbYeB6s+ueWUwSEcKOfIKjl9lxJasCRBRkjl7zp non-prod-test'
+        }
+      ]
+    }
+  }
+  computerName: vmName
+}
+
 module nic 'nic.bicep' = {
   name: '${vmName}-nic'
   params: {
@@ -64,22 +91,8 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
         enabled: true
       }
     }
-    osProfile: {
-      customData: enableCloudInit ? cloudInitValue : json('null')
-      adminUsername: 'admin-lab'
-      linuxConfiguration: {
-        disablePasswordAuthentication: true
-        ssh: {
-          publicKeys: [
-            {
-              path: '/home/admin-lab/.ssh/authorized_keys'
-              keyData: 'ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQBsUy8OllCkhpOU4FplN1b7ypawC/8QM++3gb9EbqZHCJnJdTNhk/0QZVvGsPvWeSazsShgX2TdEMMdDFscWDdAfnoB+hyjhFyWaOfKXFdzafib3HrO0rGUPqW42V6d0N2V5rh23ZFZGX5Bp75KEFnrFgGY1axCebvMvStGzXXffole1sCt0SKbvFptc/MT/ZVSqT0i0ugS0dVXsb4kuo4qnNRUAqvunljDL5oS3ZT7bQtjAvcw+IyYF6Ka9pGc4EuNaYZ2YuaxMyMOKYoMq4Qz8Qk5oF34ATGCPC0SdAgtAByNblbYeB6s+ueWUwSEcKOfIKjl9lxJasCRBRkjl7zp non-prod-test'
-            }
-          ]
-        }
-      }
-      computerName: vmName
-    }
+    osProfile: osType == 'server' ? linuxOsProfile : winOsProfile
+
     hardwareProfile: {
       vmSize: 'Standard_B1s'
     }
@@ -87,7 +100,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
       imageReference: osType == 'desktop' ? osDesktop : osServer
       osDisk: {
         createOption:'FromImage'
-        diskSizeGB: 30
+        diskSizeGB: osType == 'desktop' ? 127 : 30
         caching:'ReadWrite'
         managedDisk: {
           storageAccountType:'Premium_LRS'

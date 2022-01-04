@@ -13,6 +13,15 @@ This lab is to demonstrate the route predescence between UDR, ARS, System routes
 It deploys ARS in a hub vnet along with a VM running Quagga peered with ARS.
 The spoke1 is peered to the hub with a test VM
 
+### 2-main
+This lab deploys in the specific order
+- ARS with B2B enabled
+- VPN + ER GW
+- Connect an ER circuit
+
+This is to reproduce an unexpected behavior where, if ARS is deloyed first, ER route are not propagated to VPN GW.
+It is seen via the BGP peers view in the VPN Gateway as "route received: 0"
+
 
 ## Deployment
 
