@@ -32,7 +32,7 @@ resource erGateway 'Microsoft.Network/virtualNetworkGateways@2021-02-01' = {
 }
 
 resource erConnection 'Microsoft.Network/connections@2021-02-01' = {
-  name: '${name}toLondon'
+  name: '${name}to${location}'
   location: location
   properties: {
     authorizationKey: erAuthKey

@@ -1,20 +1,27 @@
 param frLocation string = 'francecentral'
 param uksLocation string = 'uksouth'
 param weLocation string = 'westeurope'
+param usLocation string = 'eastus'
 param deployEr bool = false
-param deployErWe bool = false
+param deployErWe bool = true
 param deployVmNwExt bool = false
 
 // Deploy a second FRC vHub and ER GW
 param deployFrc2Vhub bool = false
 param deployFrcEr2 bool = false
+param deployFrcVpn bool = false
+
+// Deploy US vHub and ER GW
+param deployUsVhub bool = true
+param deployUsEr bool = false
+param deployUsVpn bool = false
 
 // Deploy a secured hub in WE + VPN
 param deployWeSecuredHub bool = false
-param deployWeVpn bool = true
+param deployWeVpn bool = false
 
 // Make FRC and FRC2 secured
-param doFrcSecuredHub bool = false
+param doFrcSecuredHub bool = true
 param doFrc2SecuredHub bool = false
 
 param mySourceIp string = '81.49.33.216'
@@ -41,6 +48,7 @@ param adminPassword string
 
 var frcDefaultRouteTable = 'defaultRouteTable'
 var uksDefaultRouteTable = 'defaultRouteTable'
+var usDefaultRouteTable = 'defaultRouteTable'
 
 // Deployment syntax
 // az deployment group create -n Deploy -g vwan-lab-0 
@@ -134,6 +142,19 @@ resource frc2Vhub 'Microsoft.Network/virtualHubs@2020-08-01' = if(deployFrc2Vhub
   location: frLocation
   properties: {
     addressPrefix: '192.168.40.0/24'
+    sku: 'Standard'
+    virtualWan: {
+      id: vwan.id
+    }
+  }
+}
+
+// vHub EAST US
+resource usVhub 'Microsoft.Network/virtualHubs@2020-08-01' = if(deployUsVhub) {
+  name: 'h-eus'
+  location: usLocation
+  properties: {
+    addressPrefix: '192.168.50.0/24'
     sku: 'Standard'
     virtualWan: {
       id: vwan.id
@@ -280,6 +301,19 @@ resource frcRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' 
         name: 'toVnet3'
       }
     ]
+  }
+}
+
+//vHub default route table
+resource usRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
+  name: '${usVhub.name}/${usDefaultRouteTable}'
+  dependsOn: [
+  ]
+  properties: {
+    labels: [
+      'default'
+    ]
+    routes: [    ]
   }
 }
 
@@ -439,6 +473,7 @@ resource frcVnet4Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
         ]
         labels: [
           'nva'
+          'default'
         ]
       }
       vnetRoutes: {
@@ -527,6 +562,33 @@ resource frcVnet9Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     enableInternetSecurity: true
   }
 }
+
+//US PEERING TO HUB
+resource usVnet10Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2020-08-01' = if(deployUsVhub) {
+  name: usVnet10.name
+  parent: usVhub
+  properties: {
+    remoteVirtualNetwork: {
+      id: usVnet10.outputs.vnetId
+    }
+    routingConfiguration: {
+      associatedRouteTable: {
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', usVhub.name, usDefaultRouteTable)
+      }
+      propagatedRouteTables: {
+        ids: [
+          {
+            id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', usVhub.name, usDefaultRouteTable)
+          }
+        ]
+        labels: [
+          'default'
+        ]
+      }
+    }
+    enableInternetSecurity: true
+  }
+}
 // END OF PEERING TO VHUB
 
 ///////////////////////////////////////GW S2S/P2S/ER///////////////////////////////////////////
@@ -583,9 +645,33 @@ resource weVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(dep
       }
     }
   }
+  resource erCircuit 'expressRouteConnections@2020-08-01' = {
+    name: 'con-${weLocation}-er'
+    properties: {
+      authorizationKey: erAuthKey
+      expressRouteCircuitPeering: {
+        id: erCircuitId
+      }
+      routingConfiguration: {
+        associatedRouteTable: {
+          id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, 'defaultRouteTable')
+        }
+        propagatedRouteTables: {
+          ids: [
+            {
+              id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', weVhub.name, 'rtNva')
+            }
+            {
+              id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', weVhub.name, 'defaultRouteTable')
+            }
+          ]
+        }
+      }
+    }
+  }
 }
 
-module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = {
+module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = if(deployFrcVpn) {
   name: 'gw-frc-vpn'
   params: {
     asn: 65515
@@ -619,7 +705,7 @@ module weVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployWeVpn) {
   }
 }
 
-module frcVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployWeVpn) {
+module frcVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployFrcVpn) {
   name: 'Longvilliers-frc'
   params: {
     asn: 65510
@@ -741,6 +827,17 @@ module frcVnet9 'vnet.bicep' = {
     addressSpace: '192.168.19.0/24'
     vnetName: 'frc-vnet9'
     location: frLocation
+  }
+}
+
+//US FOR TEST
+module usVnet10 'vnet.bicep' = if(deployUsVhub) {
+  name: 'us-vnet10'
+  params: {
+    addressPrefix: '192.168.51.0/28'
+    addressSpace: '192.168.51.0/24'
+    vnetName: 'us-vnet10'
+    location: usLocation
   }
 }
 
@@ -1069,6 +1166,17 @@ module frcWinVmVnet9 '../_modules/vm.bicep' = {
     mySourceIp: mySourceIp
     osType: 'desktop'
     adminPassword: adminPassword
+  }
+}
+
+// US - NON NVA VM IN VNET PEERED TO VHUB US WITH DEFAULT ROUTE TABLE
+module usVmVnet10 '../_modules/vm.bicep' = {
+  name: 'us-vm10'
+  params: {
+    location: usLocation
+    subnetId: usVnet10.outputs.subnetId
+    vmName: 'us-vm10'
+    mySourceIp: mySourceIp
   }
 }
 

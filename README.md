@@ -90,29 +90,73 @@ A virtual network called "onprem" is deployed if selected with :
 
 # vwan-lab
 
+![vWan Lab schema](/images/vwan-lab-schema-1.png)
+
 ## Intent
 
 This Lab is to demonstrate the publically documented scenario of vWan with an NVA on a spoke along with the BICEP langage to deploy
+
+***This lab is in constent evolution adding component for every test so it is possible that it is not deploying successfully at first time and that you may have to redeploy multiple times, tweeking the templates but the base is there ;)***
 
 ## Parameters
 
 Using the below parameter, you can choose to add component :
 
-# param deployEr bool = false 
+### param deployEr bool = false 
+### param deployErWe bool = false 
 
 Set to true if you want to deploy ER Gateway and circuit connectivity (you must already have an ER Circuit available with an authorization key)
 
-# param deployFrcVhub2 bool = false
+We = WestEurope
 
-Set to true if you want to deploy a second vHub in Frc to have the 2 vHub in the same region scenario
+### param deployFrcVhub2 bool = false
 
-# param deployFrcEr2 bool = false
+### param deployVmNxExt bool = false
+
+Deploy VM Network extension in VMs
+
+### param deployFrc2Vhub bool = false
+
+Deploy a second vhub in France
+
+### param deployFrcVpn bool = false
+
+Set to true if you want to deploy a VPN Gateway in the first Frc vHub
+
+### param deployFrcEr2 bool = false
 
 Set to true if you want to deploy an ER Gateway in the second Frc vHub
 
-# param deployWeSecuredHub bool = false
+### param deployUsVhub bool = true
+Set to true if you want to deploy a vHub in US
+
+### param deployUsEr bool = false
+
+Set to true if you want to deploy an ER Gateway in the US vHub
+
+### param deployUsVpn bool = false
+
+Set to true if you want to deploy a VPN Gateway in the US vHub
+
+### param deployWeSecuredHub bool = false
 
 Set to true if you want to deploy an AzFw and a secured vHub in West Europe to cover secured hub scenario
+
+### param deployWeSecuredHub bool = false
+
+Set to true to make WE vHub a secured hub
+
+### param deployWeVpn bool = false
+
+Set to true if you want to deploy a VPN Gateway in the WE vHub
+
+### param doFrcSecuredHub bool = true
+
+Set to true to make FRC a secured hub
+
+### param doFrc2SecuredHub bool = false
+
+Set to true to make FRC2 a secured hub
 
 ## Requirement
 

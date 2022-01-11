@@ -1,34 +1,45 @@
-param location string = 'westeurope'
-param drLocation string = 'northeurope'
+// Location of resources
+param location string = 'francecentral'
+param drLocation string = 'eastus'
+
 param deployErMain bool = true
-param deployDrSite bool = false
+param deployMainNva bool = false
+
+// DR site deployment
+param deployDrSite bool = true
+param deployErDr bool = true
+param enableDrPeering bool = true
+
+// Admin
 param deployBastion bool = false
+
+// ER circuit info
 @secure()
 param erAuthKey string
 @secure()
 param erAuthKey2 string
 @secure()
-param erPrivatePeeringCircuitId string
+param erCircuitId string
 
 // Change the scope to be able to create the resource group before resources
 // then we specify scope at resourceGroup level for all others resources
 targetScope = 'subscription'
 
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: 'er-lab-0'
+  name: 'er-lab-main-1'
   location: location
 }
 
 resource rgDr 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: 'er-dr-lab-0'
-  location: location
+  name: 'er-lab-dr-1'
+  location: drLocation
 }
 
 module vnet '../_modules/vnetMultiSubnets.bicep' = {
-  name: 'er-hub-vn'
+  name: 'er-main-vn'
   scope: rg
   params: {
-    vnetName: 'er-hub-vn'
+    vnetName: 'er-main-vn'
     location: location
     addressSpace: '192.168.200.0/24'
     subnets: [
@@ -50,7 +61,7 @@ module vnet '../_modules/vnetMultiSubnets.bicep' = {
 
 module vnetDr '../_modules/vnetMultiSubnets.bicep' = {
   name: 'er-dr-vn'
-  scope: rg
+  scope: rgDr
   params: {
     vnetName: 'er-dr-vn'
     location: drLocation
@@ -72,19 +83,30 @@ module vnetDr '../_modules/vnetMultiSubnets.bicep' = {
   }
 }
 
+module hubToDrPeering '../_modules/vnet-peering.bicep' = if(enableDrPeering) {
+  scope: rg
+  name: 'hubToDrPeering'
+  params: {
+    aSideId: vnet.outputs.vnetId
+    aSideName: vnet.name
+    bSideId: vnetDr.outputs.vnetId
+    bSideName: vnetDr.name
+  }
+}
+
 module erGw '../_modules/ergw.bicep' = if(deployErMain) {
-  name: 'er-gw'
+  name: 'er-main-gw'
   scope: rg
   params: {
     gwSubnetId: vnet.outputs.subnets[0].id
     location: location
-    name: 'er-gw'
+    name: 'er-main-gw'
     erAuthKey: erAuthKey
-    erPrivatePeeringCircuitId: erPrivatePeeringCircuitId
+    erPrivatePeeringCircuitId: erCircuitId
   }
 }
 
-module erDrGw '../_modules/ergw.bicep' = if(deployDrSite) {
+module erDrGw '../_modules/ergw.bicep' = if(deployErDr) {
   name: 'er-dr-gw'
   scope: rgDr
   params: {
@@ -92,27 +114,27 @@ module erDrGw '../_modules/ergw.bicep' = if(deployDrSite) {
     location: drLocation
     name: 'er-dr-gw'
     erAuthKey: erAuthKey2
-    erPrivatePeeringCircuitId: erPrivatePeeringCircuitId
+    erPrivatePeeringCircuitId: erCircuitId
   }
 }
 
 module vm '../_modules/vm.bicep' = {
-  name: 'er-hub-vm'
+  name: 'er-main-vm'
   scope: rg
   params: {
     location: location
     subnetId: vnet.outputs.subnets[1].id
-    vmName: 'er-hub-vm'
+    vmName: 'er-main-vm'
   }
 }
 
-module nva '../_modules/vm.bicep' = {
-  name: 'er-hub-nva'
+module nva '../_modules/vm.bicep' = if(deployMainNva) {
+  name: 'er-main-nva'
   scope: rg
   params: {
     location: location
     subnetId: vnet.outputs.subnets[1].id
-    vmName: 'er-hub-nva'
+    vmName: 'er-main-nva'
   }
 }
 
