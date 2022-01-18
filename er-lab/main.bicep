@@ -4,11 +4,12 @@ param drLocation string = 'eastus'
 
 param deployErMain bool = true
 param deployMainNva bool = false
+param deployMainVm bool = false
 
 // DR site deployment
-param deployDrSite bool = true
-param deployErDr bool = true
-param enableDrPeering bool = true
+param deployDrSite bool = false
+param deployErDr bool = false
+param enableDrPeering bool = false
 
 // Admin
 param deployBastion bool = false
@@ -59,7 +60,7 @@ module vnet '../_modules/vnetMultiSubnets.bicep' = {
   }
 }
 
-module vnetDr '../_modules/vnetMultiSubnets.bicep' = {
+module vnetDr '../_modules/vnetMultiSubnets.bicep' = if(deployDrSite) {
   name: 'er-dr-vn'
   scope: rgDr
   params: {
@@ -118,7 +119,7 @@ module erDrGw '../_modules/ergw.bicep' = if(deployErDr) {
   }
 }
 
-module vm '../_modules/vm.bicep' = {
+module vm '../_modules/vm.bicep' = if(deployMainVm) {
   name: 'er-main-vm'
   scope: rg
   params: {
