@@ -2,6 +2,7 @@ param vnetName string
 param addressPrefix string
 param addressSpace string
 param location string
+param tags object = {}
 param routeTableId string = 'non'
 @allowed([
   'Enabled'
@@ -36,6 +37,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
       }
     ]
   }
+  tags: tags
 }
 
 output vnetId string = vnet.id
