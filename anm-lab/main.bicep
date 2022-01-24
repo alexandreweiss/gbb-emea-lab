@@ -63,6 +63,17 @@ module anmGroupB '../_modules/anm-group.bicep' = {
    }
 }
 
+module anmGroupC '../_modules/anm-group.bicep' = {
+  scope: rg
+  name: 'CGroup'
+  params: {
+    anmName: anm.name
+    description: 'vnet from group C'
+    membershipCondition: '{"allOf": [{"field": "tags[\'group\']","contains": "C"}]}'
+    name: 'Cgroup'
+   }
+}
+
 module vnet1 '../_modules/vnet.bicep' = {
   scope: rg
   name: 'anm-us-vn1'
@@ -105,3 +116,39 @@ module vnet3 '../_modules/vnet.bicep' = {
   }
 }
 
+module hubVnet1 '../_modules/vnet.bicep' = {
+  scope: rg
+  name: 'anm-we-hub1'
+  params: {
+    addressPrefix: '10.4.0.0/24'
+    addressSpace: '10.4.0.0/16'
+    location: euLocation
+    vnetName: 'anm-we-hub1'
+  }
+}
+
+module spokeVnet '../_modules/vnet.bicep' = [for i in range(5, 20): {
+  scope: rg
+  name: 'anm-we-spoke${i}'
+  params: {
+    addressPrefix: '10.${i}.0.0/24'
+    addressSpace: '10.${i}.0.0/16'
+    location: euLocation
+    vnetName: 'anm-we-spoke${i}'
+    tags : {
+      'group': 'C'
+    }
+  }
+}]
+
+module anmConfigHS '../_modules/anm-hs-config.bicep' = {
+  scope: rg
+  name: 'HandS-CGroup'
+  params: {
+    anmName: anm.name
+    hubId: hubVnet1.outputs.vnetId
+    configName: 'HandS-CGroup'
+    topology: 'HubAndSpoke'
+    groupId: anmGroupC.outputs.anmGroupId
+  }
+}
