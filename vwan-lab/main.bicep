@@ -145,6 +145,15 @@ resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
   name: '${frcVhub.name}/rtNva'
   properties: {
     routes: [
+      {
+        destinations: [
+          '0.0.0.0/0'
+        ]
+        destinationType: 'CIDR'
+        name: 'toInternet'
+        nextHop: resourceId('Microsoft.Network/virtualHubs/hubVirtualNetworkConnections', frcVhub.name, 'frc-vnet4')
+        nextHopType: 'ResourceId'
+      }
     ]
     labels: [
       'nva'
@@ -456,15 +465,15 @@ resource uksRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' 
       'default'
     ]
     routes: [
-      // {
-      //   destinations: [
-      //     '0.0.0.0/0'
-      //   ]
-      //   destinationType: 'CIDR'
-      //   nextHop: uksVnet2Connection.id
-      //   nextHopType: 'ResourceId'
-      //   name: 'toInternet'
-      // }
+      {
+        destinations: [
+          '0.0.0.0/0'
+        ]
+        destinationType: 'CIDR'
+        nextHop: frcVnet4Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toInternet'
+      }
       {
         destinations: [
           '192.168.22.0/24'
@@ -594,7 +603,8 @@ resource frcVnet3Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     }
     routingConfiguration: {
       associatedRouteTable: {
-        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, 'rtVnet')
+        // When rtvnet/rtnva desired id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, 'rtVnet')
+        id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, frcDefaultRouteTable )
       }
       propagatedRouteTables: {
         ids: [
@@ -1136,6 +1146,7 @@ resource uksVnet1Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
     routingConfiguration: {
       associatedRouteTable: {
         id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'rtVnet')
+        //id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, uksDefaultRouteTable)
       }
       propagatedRouteTables: {
         ids: [
