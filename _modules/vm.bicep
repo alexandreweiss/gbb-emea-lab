@@ -85,6 +85,9 @@ module nic 'nic.bicep' = {
 resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   name: vmName
   location: location
+  tags: {
+    'includeInUpdates': 'true'
+  }
   properties: {
     diagnosticsProfile: {
       bootDiagnostics: {

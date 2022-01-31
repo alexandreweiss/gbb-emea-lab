@@ -346,7 +346,7 @@ resource usVhub 'Microsoft.Network/virtualHubs@2020-08-01' = if(deployUsVhub) {
 // vHub default route table
 // */
 
-resource usRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
+resource usRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = if(deployUsVhub) {
   name: '${usVhub.name}/${usDefaultRouteTable}'
   dependsOn: [
   ]
@@ -570,21 +570,24 @@ resource frcVnet4Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
               '0.0.0.0/0'
             ]
             name: 'toInternet'
-            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            // nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            nextHopIpAddress: frcIlbNva.outputs.ilbPrivateIp
           }
           {
             addressPrefixes: [
               '192.168.12.0/24'
             ]
             name: 'toVnet7'
-            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            // nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            nextHopIpAddress: frcIlbNva.outputs.ilbPrivateIp
           }
           {
             addressPrefixes: [
               '192.168.13.0/24'
             ]
             name: 'toVnet8'
-            nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            // nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+            nextHopIpAddress: frcIlbNva.outputs.ilbPrivateIp
           }
         ]
       }
@@ -641,6 +644,9 @@ resource frcVnet9Connection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConn
           {
             id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, frcDefaultRouteTable)
           }
+        ]
+        labels: [
+          'default'
         ]
       }
     }
@@ -888,7 +894,8 @@ resource frcVnet78Rt 'Microsoft.Network/routeTables@2020-11-01' = {
         name: 'default'
         properties: {
           addressPrefix: '0.0.0.0/0'
-          nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+          // nextHopIpAddress: frcVmNva.outputs.nicPrivateIp
+          nextHopIpAddress: frcIlbNva.outputs.ilbPrivateIp
           nextHopType:'VirtualAppliance'
         }
       }
@@ -1182,6 +1189,29 @@ module frcVmNva '../_modules/vm.bicep' = {
     createPublicIpNsg: true
     enableCloudInit: true
     mySourceIp: mySourceIp
+  }
+}
+
+module frcVmNva2 '../_modules/vm.bicep' = {
+  name: 'frc-nva2'
+  params: {
+    location: frLocation
+    subnetId: frcVnet4.outputs.subnetId
+    vmName: 'frc-nva2'
+    enableForwarding: true
+    createPublicIpNsg: true
+    enableCloudInit: true
+    mySourceIp: mySourceIp
+  }
+}
+
+module frcIlbNva '../_modules/ilbHa.bicep' = {
+  name: 'frc-ilb-nva'
+  params: {
+    backendIp: frcVmNva.outputs.nicPrivateIp
+    lbName: 'frc-ilb-nva'
+    location: frLocation
+    subnetId: frcVnet4.outputs.subnetId
   }
 }
 

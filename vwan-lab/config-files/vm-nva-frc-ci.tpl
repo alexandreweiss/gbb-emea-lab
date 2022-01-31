@@ -7,5 +7,5 @@ write_files:
       net.ipv4.conf.all.forwarding=1
 runcmd:
   - sysctl -w net.ipv4.conf.all.forwarding=1
-  - curl https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/develop/vwan-lab/config-files/iptables.conf --output /home/admin-lab/iptables.conf
+  - curl https://raw.githubusercontent.com/alexandreweiss/gbb-emea-lab/master/vwan-lab/config-files/iptables.conf --output /home/admin-lab/iptables.conf
   - iptables-restore /home/admin-lab/iptables.conf
