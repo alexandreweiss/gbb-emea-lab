@@ -4,7 +4,7 @@ param subnetId string
 param backendIp string
 
 
-resource slb 'Microsoft.Network/loadBalancers@2020-11-01' = {
+resource slb 'Microsoft.Network/loadBalancers@2021-05-01' = {
   name: lbName
   location: location
   sku: {
@@ -17,13 +17,19 @@ resource slb 'Microsoft.Network/loadBalancers@2020-11-01' = {
         name: 'bePool0'
         properties: {
           loadBalancerBackendAddresses: [
-            {
-              name: 'beAddress1'
-              properties: {
-                ipAddress: backendIp
+          {
+            name: 'beAddress1'
+            properties: {
+              loadBalancerFrontendIPConfiguration: {
+                id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations',lbName,'ipConfig0')
+              }
+              ipAddress: backendIp
+              subnet: {
+                id: subnetId
               }
             }
-          ]
+          }
+        ]
         }
       }
     ]
@@ -40,7 +46,7 @@ resource slb 'Microsoft.Network/loadBalancers@2020-11-01' = {
     ]
     loadBalancingRules: [
       {
-        name: 'http'
+        name: 'HAPort'
         properties: {
           backendAddressPool: {
             id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'bePool0')
@@ -51,10 +57,26 @@ resource slb 'Microsoft.Network/loadBalancers@2020-11-01' = {
           probe: {
             id: resourceId('Microsoft.Network/loadBalancers/probes', lbName, 'lbProbe')
           }
-          protocol: 'Tcp'
-          frontendPort: 80
-          backendPort: 80
+          protocol: 'All'
+          frontendPort: 0
+          backendPort: 0
           idleTimeoutInMinutes: 15
+        }
+      }
+    ]
+    inboundNatRules: [
+      {
+        name: 'tcp22'
+        properties: {
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/loadBalancers/backendPools', lbName, 'bePool0')
+          }
+          backendPort: 22
+          frontendPort: 22
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'ipConfig0')
+          }
+          protocol: 'Tcp'
         }
       }
     ]
@@ -62,7 +84,7 @@ resource slb 'Microsoft.Network/loadBalancers@2020-11-01' = {
       {
         properties: {
           protocol: 'Tcp'
-          port: 80
+          port: 22
           intervalInSeconds: 15
           numberOfProbes: 2
         }

@@ -95,6 +95,34 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
           sourcePortRange: '*'
         }
       }
+      {
+        name: 'allow-rfc1918C-in-out'
+        properties: {
+          access:'Allow'
+          description:'Allow FRC1918 C from WW'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+          direction:'Inbound'
+          protocol:'*'
+          priority: 305
+          sourceAddressPrefix: '192.168.0.0/16'
+          sourcePortRange: '*'
+        }
+      }
+      {
+        name: 'allow-rfc1918C-out'
+        properties: {
+          access:'Allow'
+          description:'Allow FRC1918 C from WW'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '*'
+          direction:'Outbound'
+          protocol: '*'
+          priority: 300
+          sourceAddressPrefix: '192.168.0.0/16'
+          sourcePortRange: '*'
+        }
+      }
     ]
   }
 }

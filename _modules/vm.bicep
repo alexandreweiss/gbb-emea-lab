@@ -4,7 +4,7 @@ param subnetId string
 param enableForwarding bool = false
 param createPublicIpNsg bool = false
 param enableCloudInit bool = false
-param cloudInitValue string = 'I2luY2x1ZGUKaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FsZXhhbmRyZXdlaXNzL2diYi1lbWVhLWxhYi9kZXZlbG9wL3Z3YW4tbGFiL2NvbmZpZy1maWxlcy92bS1udmEtZnJjLWNpLnRwbA=='
+param cloudInitValue string = 'I2luY2x1ZGUKaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FsZXhhbmRyZXdlaXNzL2diYi1lbWVhLWxhYi9tYXN0ZXIvdndhbi1sYWIvY29uZmlnLWZpbGVzL3ZtLW52YS1mcmMtY2kudHBs'
 param mySourceIp string = '10.0.0.1'
 param lbBackendPoolId string = 'no'
 
@@ -85,6 +85,9 @@ module nic 'nic.bicep' = {
 resource vm 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   name: vmName
   location: location
+  tags: {
+    'includeInUpdates': 'true'
+  }
   properties: {
     diagnosticsProfile: {
       bootDiagnostics: {
