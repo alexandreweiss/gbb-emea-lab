@@ -22,6 +22,14 @@ is the name of your AFD deployment in your subscription
 ### param mySourceIp string
 is the source IP your are connecting from
 
+## Deployment
+
+Just run the command below from the .\afd-lab folder
+
+```az deployment sub create -n afd-lab-2 -l westeurope --template-file .\main.bicep ```
+
+Resource group info are in the main.bicep file.
+
 ## Schema
 
-[AFD Schema](../images/afd-lab-schema.png)
+![AFD Schema](../images/afd-lab-schema.png)
