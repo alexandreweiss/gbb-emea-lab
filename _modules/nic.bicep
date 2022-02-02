@@ -96,6 +96,20 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
         }
       }
       {
+        name: 'allow-http-afd'
+        properties: {
+          access:'Allow'
+          description:'Allow probe from afd backend'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '80'
+          direction:'Inbound'
+          protocol:'Tcp'
+          priority: 210
+          sourceAddressPrefix: 'AzureFrontDoor.Backend'
+          sourcePortRange: '*'
+        }
+      }
+      {
         name: 'allow-rfc1918C-in-out'
         properties: {
           access:'Allow'
@@ -129,3 +143,4 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
 
 output nicId string = createPublicIpNsg ? '${nicPip.id}' : '${nicNoPip.id}'
 output nicPrivateIp string = createPublicIpNsg ? '${nicPip.properties.ipConfigurations[0].properties.privateIPAddress}' : '${nicNoPip.properties.ipConfigurations[0].properties.privateIPAddress}'
+output nicPublicFqdn string = createPublicIpNsg ? '${publicIp.properties.ipAddress}' : 'NA'
