@@ -5,6 +5,9 @@ Place to host all GGB EMEA Labs artifacts
 
 # Table of Content
 
+## anycast DNS lab
+[AnycastDNS Lab](/anycastDns-lab/README.md)
+
 ## Azure Front Door
 [AFD Lab](/afd-lab/README.md)
 
