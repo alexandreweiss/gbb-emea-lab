@@ -1,0 +1,115 @@
+param location string
+@secure()
+param erAuthKey string
+@secure()
+param erCircuitId string
+
+// Change the scope to be able to create the resource group before resources
+// then we specify scope at resourceGroup level for all others resources
+targetScope = 'subscription'
+
+resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+  name: 'anycastDns-lab-0'
+  location: location
+}
+
+module serverVnet '../_modules/vnetMultiSubnets.bicep' = {
+  scope: rg
+  name: 'serverVnet'
+  params: {
+    addressSpace: '172.20.20.0/24'
+    location: location
+    subnets: [
+      {
+        name: 'RouteServerSubnet'
+        addressPrefix: '172.20.20.0/27'
+      }
+      {
+        name: 'AzureBastionSubnet'
+        addressPrefix: '172.20.20.32/27'
+      }
+      {
+        name: 'server'
+        addressPrefix: '172.20.20.64/28'
+      }
+      {
+        name: 'GatewaySubnet'
+        addressPrefix: '172.20.20.96/27'
+      }
+      {
+        name: 'Nva'
+        addressPrefix: '172.20.20.128/27'
+      }
+    ]
+    vnetName: 'serverVnet'
+  }
+}
+
+module privateDnsZone '../_modules/privatednszone.bicep' = {
+  scope: rg
+  name: 'test.local'
+  params: {
+    vnetId: serverVnet.outputs.vnetId
+    wwwIp: '172.20.20.100'
+  }
+}
+
+module dns1 '../_modules/vm.bicep' = {
+  scope: rg
+  name: 'dns1'
+  params: {
+    location: location
+    subnetId: serverVnet.outputs.subnets[2].id
+    vmName: 'dns1'
+    cloudInitValue: 'I2Nsb3VkLWNvbmZpZwpwYWNrYWdlczoKICAtIGJpbmQ5CnJ1bmNtZDoKICAtIG12IC9ldGMvYmluZC9uYW1lZC5jb25mLm9wdGlvbnMgL2V0Yy9iaW5kL25hbWVkLmNvbmYub3B0aW9ucy5vcmlnCiAgLSBzdWRvIGVjaG8gJ29wdGlvbnMgeyBsaXN0ZW4tb24gcG9ydCA1MyB7IGFueTsgfTsgbGlzdGVuLW9uLXY2IHBvcnQgNTMgeyA6OjE7IH07IGFsbG93LXF1ZXJ5IHsgYW55OyB9OyByZWN1cnNpb24geWVzOyBkbnNzZWMtZW5hYmxlIHllczsgZG5zc2VjLXZhbGlkYXRpb24geWVzOyBmb3J3YXJkZXJzIHsgMTY4LjYzLjEyOS4xNjsgfTsgfTsnID4vZXRjL2JpbmQvbmFtZWQuY29uZi5vcHRpb25zCiAgLSBzdWRvIHN5c3RlbWN0bCBlbmFibGUgLS1ub3cgYmluZDkKICAtIHN1ZG8gc3lzdGVtY3RsIHJlbG9hZCBiaW5kOQ=='
+    enableCloudInit: true
+  }
+}
+
+module dns2 '../_modules/vm.bicep' = {
+  scope: rg
+  name: 'dns2'
+  params: {
+    location: location
+    subnetId: serverVnet.outputs.subnets[2].id
+    vmName: 'dns2'
+    cloudInitValue: 'I2Nsb3VkLWNvbmZpZwpwYWNrYWdlczoKICAtIGJpbmQ5CnJ1bmNtZDoKICAtIG12IC9ldGMvYmluZC9uYW1lZC5jb25mLm9wdGlvbnMgL2V0Yy9iaW5kL25hbWVkLmNvbmYub3B0aW9ucy5vcmlnCiAgLSBzdWRvIGVjaG8gJ29wdGlvbnMgeyBsaXN0ZW4tb24gcG9ydCA1MyB7IGFueTsgfTsgbGlzdGVuLW9uLXY2IHBvcnQgNTMgeyA6OjE7IH07IGFsbG93LXF1ZXJ5IHsgYW55OyB9OyByZWN1cnNpb24geWVzOyBkbnNzZWMtZW5hYmxlIHllczsgZG5zc2VjLXZhbGlkYXRpb24geWVzOyBmb3J3YXJkZXJzIHsgMTY4LjYzLjEyOS4xNjsgfTsgfTsnID4vZXRjL2JpbmQvbmFtZWQuY29uZi5vcHRpb25zCiAgLSBzdWRvIHN5c3RlbWN0bCBlbmFibGUgLS1ub3cgYmluZDkKICAtIHN1ZG8gc3lzdGVtY3RsIHJlbG9hZCBiaW5kOQ=='
+  }
+}
+
+module nva '../_modules/vm.bicep' = {
+  scope: rg
+  name: 'nva'
+  params: {
+    location: location
+    subnetId: serverVnet.outputs.subnets[4].id
+    vmName: 'nva'
+    cloudInitValue: 'IyEvYmluL2Jhc2gKCiMjIE5PVEU6CiMjIGJlZm9yZSBydW5uaW5nIHRoZSBzY3JpcHQsIGN1c3RvbWl6ZSB0aGUgdmFsdWVzIG9mIHZhcmlhYmxlcyBzdWl0YWJsZSBmb3IgeW91ciBkZXBsb3ltZW50LiAKIyMgYXNuX3F1YWdnYTogQXV0b25vbW91cyBzeXN0ZW0gbnVtYmVyIGFzc2lnbmVkIHRvIHF1YWdnYQojIyBiZ3Bfcm91dGVySWQ6IElQIGFkZHJlc3Mgb2YgcXVhZ2dhIFZNCiMjIGJncF9uZXR3b3JrMTogZmlyc3QgbmV0d29yayBhZHZlcnRpc2VkIGZyb20gcXVhZ2dhIHRvIHRoZSByb3V0ZXIgc2VydmVyIChpbmNsdXNpdmUgb2Ygc3VibmV0bWFzaykKIyMgYmdwX25ldHdvcmsyOiBzZWNvbmQgbmV0d29yayBhZHZlcnRpc2VkIGZyb20gcXVhZ2dhIHRvIHRoZSByb3V0ZXIgc2VydmVyIChpbmNsdXNpdmUgb2Ygc3VibmV0bWFzaykKIyMgYmdwX25ldHdvcmszOiB0aGlyZCBuZXR3b3JrIGFkdmVydGlzZWQgZnJvbSBxdWFnZ2EgdG8gdGhlIHJvdXRlciBzZXJ2ZXIgKGluY2x1c2l2ZSBvZiBzdWJuZXRtYXNrKQojIyByb3V0ZXNlcnZlcl9JUDE6IGZpcnN0IElQIGFkZHJlc3Mgb2YgdGhlIHJvdXRlciBzZXJ2ZXIgCiMjIHJvdXRlc2VydmVyX0lQMjogc2Vjb25kIElQIGFkZHJlc3Mgb2YgdGhlIHJvdXRlciBzZXJ2ZXIKCmFzbl9xdWFnZ2E9NjUwMDcKYmdwX3JvdXRlcklkPTE3Mi4yMC4yMC4xMzIKYmdwX25ldHdvcmsxPTEwLjEwLjEwLjEwLzMyCmFueWNhc3RfSVA9MTAuMTAuMTAuMTAKYXp1cmVfSVA9MTcyLjIwLjIwLjAvMjQKcm91dGVzZXJ2ZXJfSVAxPTE3Mi4yMC4yMC40CnJvdXRlc2VydmVyX0lQMj0xNzIuMjAuMjAuNQpkbnNzZXJ2ZXJfSVAxPTE3Mi4yMC4yMC42OApkbnNzZXJ2ZXJfSVAyPTE3Mi4yMC4yMC42OQoKc3VkbyBhcHQtZ2V0IC15IHVwZGF0ZQoKIyMgSW5zdGFsbCB0aGUgUXVhZ2dhIHJvdXRpbmcgZGFlbW9uCmVjaG8gIkluc3RhbGxpbmcgcXVhZ2dhIgpzdWRvIGFwdC1nZXQgLXkgaW5zdGFsbCBxdWFnZ2EKCiMjICBydW4gdGhlIHVwZGF0ZXMgYW5kIGVuc3VyZSB0aGUgcGFja2FnZXMgYXJlIHVwIHRvIGRhdGUgYW5kIHRoZXJlIGlzIG5vIG5ldyB2ZXJzaW9uIGF2YWlsYWJsZSBmb3IgdGhlIHBhY2thZ2VzCnN1ZG8gYXB0LWdldCAteSB1cGRhdGUgLS1maXgtbWlzc2luZwoKIyMgRW5hYmxlIElQdjQgZm9yd2FyZGluZwplY2hvICJuZXQuaXB2NC5jb25mLmFsbC5mb3J3YXJkaW5nPTEiIHwgc3VkbyB0ZWUgLWEgL2V0Yy9zeXNjdGwuY29uZiAKZWNobyAibmV0LmlwdjQuY29uZi5kZWZhdWx0LmZvcndhcmRpbmc9MSIgfCBzdWRvIHRlZSAtYSAvZXRjL3N5c2N0bC5jb25mIApzeXNjdGwgLXAKCiMjIFVwZGF0ZSBJUFRBQkxFUyB0byBkbyBTTkFUL0ROQVQKIyBUbyBETlMKIyBETkFUIHRvIEROUyArIFNOQVQgZnJvbSBOVkEKc3VkbyBpcHRhYmxlcyAtdCBuYXQgLUEgUFJFUk9VVElORyAtZCAkYmdwX25ldHdvcmsxIC1qIEROQVQgLS10by1kZXN0aW5hdGlvbiAkZG5zc2VydmVyX0lQMQpzdWRvIGlwdGFibGVzIC10IG5hdCAtQSBQT1NUUk9VVElORyAhIC1zICRhenVyZV9JUCAtZCAkZG5zc2VydmVyX0lQMSAtaiBTTkFUIC0tdG8tc291cmNlICRiZ3Bfcm91dGVySWQKCnN1ZG8gaXB0YWJsZXMgLXQgbmF0IC1BIFBSRVJPVVRJTkcgLWQgJGJncF9uZXR3b3JrMSAtaiBETkFUIC0tdG8tZGVzdGluYXRpb24gJGRuc3NlcnZlcl9JUDIKc3VkbyBpcHRhYmxlcyAtdCBuYXQgLUEgUE9TVFJPVVRJTkcgISAtcyAkYXp1cmVfSVAgLWQgJGRuc3NlcnZlcl9JUDIgLWogU05BVCAtLXRvLXNvdXJjZSAkYmdwX3JvdXRlcklkCgojIyBGcm9tIEROUyAocmVwbHkpCiMgU05BVCBETlMgdG8gYW55Y2FzdCBJUCB3aGVuIGdvaW5nIG9uLXByZW0Kc3VkbyBpcHRhYmxlcyAtdCBuYXQgLUEgUE9TVFJPVVRJTkcgLXMgJGRuc3NlcnZlcl9JUDEgISAtZCAkYXp1cmVfSVAgLWogU05BVCAtLXRvLXNvdXJjZSAkYW55Y2FzdF9JUApzdWRvIGlwdGFibGVzIC10IG5hdCAtQSBQT1NUUk9VVElORyAtcyAkZG5zc2VydmVyX0lQMiAhIC1kICRhenVyZV9JUCAtaiBTTkFUIC0tdG8tc291cmNlICRhbnljYXN0X0lQCgoKIyMgQ3JlYXRlIGEgZm9sZGVyIGZvciB0aGUgcXVhZ2dhIGxvZ3MKZWNobyAiY3JlYXRpbmcgZm9sZGVyIGZvciBxdWFnZ2EgbG9ncyIKc3VkbyBta2RpciAtcCAvdmFyL2xvZy9xdWFnZ2EgJiYgc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC92YXIvbG9nL3F1YWdnYQpzdWRvIHRvdWNoIC92YXIvbG9nL3plYnJhLmxvZwpzdWRvIGNob3duIHF1YWdnYTpxdWFnZ2EgL3Zhci9sb2cvemVicmEubG9nCgojIyBDcmVhdGUgdGhlIGNvbmZpZ3VyYXRpb24gZmlsZXMgZm9yIFF1YWdnYSBkYWVtb24KZWNobyAiY3JlYXRpbmcgZW1wdHkgcXVhZ2dhIGNvbmZpZyBmaWxlcyIKc3VkbyB0b3VjaCAvZXRjL3F1YWdnYS9iYWJlbGQuY29uZgpzdWRvIHRvdWNoIC9ldGMvcXVhZ2dhL2JncGQuY29uZgpzdWRvIHRvdWNoIC9ldGMvcXVhZ2dhL2lzaXNkLmNvbmYKc3VkbyB0b3VjaCAvZXRjL3F1YWdnYS9vc3BmNmQuY29uZgpzdWRvIHRvdWNoIC9ldGMvcXVhZ2dhL29zcGZkLmNvbmYKc3VkbyB0b3VjaCAvZXRjL3F1YWdnYS9yaXBkLmNvbmYKc3VkbyB0b3VjaCAvZXRjL3F1YWdnYS9yaXBuZ2QuY29uZgpzdWRvIHRvdWNoIC9ldGMvcXVhZ2dhL3Z0eXNoLmNvbmYKc3VkbyB0b3VjaCAvZXRjL3F1YWdnYS96ZWJyYS5jb25mCgojIyBDaGFuZ2UgdGhlIG93bmVyc2hpcCBhbmQgcGVybWlzc2lvbiBmb3IgY29uZmlndXJhdGlvbiBmaWxlcywgdW5kZXIgL2V0Yy9xdWFnZ2EgZm9sZGVyCmVjaG8gImFzc2lnbiB0byBxdWFnZ2EgdXNlciB0aGUgb3duZXJzaGlwIG9mIGNvbmZpZyBmaWxlcyIKc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC9ldGMvcXVhZ2dhL2JhYmVsZC5jb25mICYmIHN1ZG8gY2htb2QgNjQwIC9ldGMvcXVhZ2dhL2JhYmVsZC5jb25mCnN1ZG8gY2hvd24gcXVhZ2dhOnF1YWdnYSAvZXRjL3F1YWdnYS9iZ3BkLmNvbmYgJiYgc3VkbyBjaG1vZCA2NDAgL2V0Yy9xdWFnZ2EvYmdwZC5jb25mCnN1ZG8gY2hvd24gcXVhZ2dhOnF1YWdnYSAvZXRjL3F1YWdnYS9pc2lzZC5jb25mICYmIHN1ZG8gY2htb2QgNjQwIC9ldGMvcXVhZ2dhL2lzaXNkLmNvbmYKc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC9ldGMvcXVhZ2dhL29zcGY2ZC5jb25mICYmIHN1ZG8gY2htb2QgNjQwIC9ldGMvcXVhZ2dhL29zcGY2ZC5jb25mCnN1ZG8gY2hvd24gcXVhZ2dhOnF1YWdnYSAvZXRjL3F1YWdnYS9vc3BmZC5jb25mICYmIHN1ZG8gY2htb2QgNjQwIC9ldGMvcXVhZ2dhL29zcGZkLmNvbmYKc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC9ldGMvcXVhZ2dhL3JpcGQuY29uZiAmJiBzdWRvIGNobW9kIDY0MCAvZXRjL3F1YWdnYS9yaXBkLmNvbmYKc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC9ldGMvcXVhZ2dhL3JpcG5nZC5jb25mICYmIHN1ZG8gY2htb2QgNjQwIC9ldGMvcXVhZ2dhL3JpcG5nZC5jb25mCnN1ZG8gY2hvd24gcXVhZ2dhOnF1YWdnYXZ0eSAvZXRjL3F1YWdnYS92dHlzaC5jb25mICYmIHN1ZG8gY2htb2QgNjYwIC9ldGMvcXVhZ2dhL3Z0eXNoLmNvbmYKc3VkbyBjaG93biBxdWFnZ2E6cXVhZ2dhIC9ldGMvcXVhZ2dhL3plYnJhLmNvbmYgJiYgc3VkbyBjaG1vZCA2NDAgL2V0Yy9xdWFnZ2EvemVicmEuY29uZgoKIyMgaW5pdGlhbCBzdGFydHVwIGNvbmZpZ3VyYXRpb24gZm9yIFF1YWdnYSBkYWVtb25zIGFyZSByZXF1aXJlZAplY2hvICJTZXR0aW5nIHVwIGRhZW1vbiBzdGFydHVwIGNvbmZpZyIKZWNobyAnemVicmE9eWVzJyA+IC9ldGMvcXVhZ2dhL2RhZW1vbnMKZWNobyAnYmdwZD15ZXMnID4+IC9ldGMvcXVhZ2dhL2RhZW1vbnMKZWNobyAnb3NwZmQ9bm8nID4+IC9ldGMvcXVhZ2dhL2RhZW1vbnMKZWNobyAnb3NwZjZkPW5vJyA+PiAvZXRjL3F1YWdnYS9kYWVtb25zCmVjaG8gJ3JpcGQ9bm8nID4+IC9ldGMvcXVhZ2dhL2RhZW1vbnMKZWNobyAncmlwbmdkPW5vJyA+PiAvZXRjL3F1YWdnYS9kYWVtb25zCmVjaG8gJ2lzaXNkPW5vJyA+PiAvZXRjL3F1YWdnYS9kYWVtb25zCmVjaG8gJ2JhYmVsZD1ubycgPj4gL2V0Yy9xdWFnZ2EvZGFlbW9ucwoKZWNobyAiYWRkIHplYnJhIGNvbmZpZyIKY2F0IDw8RU9GID4gL2V0Yy9xdWFnZ2EvemVicmEuY29uZgohCmludGVyZmFjZSBldGgwCiEKaW50ZXJmYWNlIGxvCiEKaXAgZm9yd2FyZGluZwohCmxpbmUgdnR5CiEKRU9GCgoKZWNobyAiYWRkIHF1YWdnYSBjb25maWciCmNhdCA8PEVPRiA+IC9ldGMvcXVhZ2dhL2JncGQuY29uZgohCnJvdXRlciBiZ3AgJGFzbl9xdWFnZ2EKIGJncCByb3V0ZXItaWQgJGJncF9yb3V0ZXJJZAogbmV0d29yayAkYmdwX25ldHdvcmsxCiBuZWlnaGJvciAkcm91dGVzZXJ2ZXJfSVAxIHJlbW90ZS1hcyA2NTUxNQogbmVpZ2hib3IgJHJvdXRlc2VydmVyX0lQMSBzb2Z0LXJlY29uZmlndXJhdGlvbiBpbmJvdW5kCiBuZWlnaGJvciAkcm91dGVzZXJ2ZXJfSVAyIHJlbW90ZS1hcyA2NTUxNQogbmVpZ2hib3IgJHJvdXRlc2VydmVyX0lQMiBzb2Z0LXJlY29uZmlndXJhdGlvbiBpbmJvdW5kCiEKIGFkZHJlc3MtZmFtaWx5IGlwdjYKIGV4aXQtYWRkcmVzcy1mYW1pbHkKIGV4aXQKIQpsaW5lIHZ0eQohCkVPRgoKIyMgdG8gc3RhcnQgZGFlbW9ucyBhdCBzeXN0ZW0gc3RhcnR1cAplY2hvICJlbmFibGUgemVicmEgYW5kIHF1YWdnYSBkYWVtb25zIGF0IHN5c3RlbSBzdGFydHVwIgpzeXN0ZW1jdGwgZW5hYmxlIHplYnJhLnNlcnZpY2UKc3lzdGVtY3RsIGVuYWJsZSBiZ3BkLnNlcnZpY2UKCiMjIHJ1biB0aGUgZGFlbW9ucwplY2hvICJzdGFydCB6ZWJyYSBhbmQgcXVhZ2dhIGRhZW1vbnMiCnN5c3RlbWN0bCBzdGFydCB6ZWJyYSAKc3lzdGVtY3RsIHN0YXJ0IGJncGQgIA=='
+    enableCloudInit: true
+    enableForwarding: true
+  }
+}
+
+module ars '../_modules/ars.bicep' = {
+  scope: rg
+  name: 'arsDns'
+  params: {
+    location: location
+    name: 'arsDns'
+    subnetId: serverVnet.outputs.subnets[0].id
+    peer1Asn: 65007
+    peer1Ip: '172.20.20.132'
+  }
+}
+
+module erGw '../_modules/ergw.bicep' = {
+  scope: rg
+  name: 'dnsErGw'
+  params: {
+    erAuthKey: erAuthKey
+    erPrivatePeeringCircuitId: erCircuitId
+    gwSubnetId: serverVnet.outputs.subnets[3].id
+    location: location
+    name: 'dnsErGw'
+  }
+}

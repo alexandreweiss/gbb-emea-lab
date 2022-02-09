@@ -17,7 +17,7 @@ param deployUsVhub bool = false
 
 // Deploy a secured hub in WE + VPN
 param deployWeSecuredHub bool = false
-param deployWeVpn bool = false
+param deployWeVpn bool = true
 
 // Make FRC and FRC2 and UKS secured
 param doFrcSecuredHub bool = false
@@ -834,7 +834,7 @@ module weVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployWeVpn) {
     bgpIp: '192.168.17.1'
     location: weLocation
     name: 'Longvilliers'
-    publicIp: 'ferme.ananableu.fr'
+    publicIp: 'ferme.ddns.net'
     vWanId: vwan.id
     vpnGatewayName: weVhubVpnGw.name
     psk: psk
@@ -848,7 +848,7 @@ module frcVpnSite1 '../_modules/vwanvpnsite.bicep' = if(deployFrcVpn) {
     bgpIp: '192.168.17.1'
     location: frLocation
     name: 'Longvilliers-frc'
-    publicIp: 'ferme.ananableu.fr'
+    publicIp: 'ferme.ddns.net'
     vWanId: vwan.id
     vpnGatewayName: frcVhubVpnGw.name
     psk: psk
