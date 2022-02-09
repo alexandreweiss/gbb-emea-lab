@@ -45,6 +45,15 @@ module serverVnet '../_modules/vnetMultiSubnets.bicep' = {
   }
 }
 
+module privateDnsZone '../_modules/privatednszone.bicep' = {
+  scope: rg
+  name: 'test.local'
+  params: {
+    vnetId: serverVnet.outputs.vnetId
+    wwwIp: '172.20.30.100'
+  }
+}
+
 module dns1 '../_modules/vm.bicep' = {
   scope: rg
   name: 'dns1'

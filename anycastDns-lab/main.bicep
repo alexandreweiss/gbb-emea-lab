@@ -1,4 +1,4 @@
-param location string = 'westeurope'
+param location string
 @secure()
 param erAuthKey string
 @secure()
@@ -42,6 +42,15 @@ module serverVnet '../_modules/vnetMultiSubnets.bicep' = {
       }
     ]
     vnetName: 'serverVnet'
+  }
+}
+
+module privateDnsZone '../_modules/privatednszone.bicep' = {
+  scope: rg
+  name: 'test.local'
+  params: {
+    vnetId: serverVnet.outputs.vnetId
+    wwwIp: '172.20.20.100'
   }
 }
 
@@ -104,5 +113,3 @@ module erGw '../_modules/ergw.bicep' = {
     name: 'dnsErGw'
   }
 }
-
-
