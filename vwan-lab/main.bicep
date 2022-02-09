@@ -4,6 +4,7 @@ param weLocation string = 'westeurope'
 param usLocation string = 'eastus'
 param deployEr bool = false
 param deployErWe bool = false
+param deployErUks bool = false
 param deployVmNwExt bool = false
 
 // Deploy a second FRC vHub and ER GW
@@ -18,11 +19,12 @@ param deployUsVhub bool = false
 param deployWeSecuredHub bool = false
 param deployWeVpn bool = false
 
-// Make FRC and FRC2 secured
+// Make FRC and FRC2 and UKS secured
 param doFrcSecuredHub bool = false
 param doFrc2SecuredHub bool = false
+param doUksSecuredHub bool = false
 
-param mySourceIp string = '81.49.39.190'
+param mySourceIp string = '90.103.113.242'
 
 // ER Circuit
 @secure()
@@ -371,6 +373,52 @@ resource vhubuks 'Microsoft.Network/virtualHubs@2020-08-01' = {
     virtualWan: {
       id: vwan.id
     }
+  }
+}
+
+resource uksVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(deployErUks) {
+  name: 'gw-uks-er'
+  location: uksLocation
+  properties: {
+    virtualHub: {
+      id: vhubuks.id
+    }
+    autoScaleConfiguration: {
+      bounds: {
+        min: 1
+      }
+    }
+  }
+  resource erCircuit 'expressRouteConnections@2020-08-01' = {
+    name: 'con-${uksLocation}-er'
+    properties: {
+      authorizationKey: erAuthKey
+      expressRouteCircuitPeering: {
+        id: erCircuitId
+      }
+      routingConfiguration: {
+        associatedRouteTable: {
+          id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'defaultRouteTable')
+        }
+        propagatedRouteTables: {
+          ids: [
+            {
+              id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', vhubuks.name, 'defaultRouteTable')
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+module uksAzFw '../_modules/vhub-azfw.bicep' =  if (doUksSecuredHub) {
+  name: 'azfw-vhub-uks'
+  params: {
+    fwName: 'azfw-vhub-uks'
+    location: uksLocation
+    virtualHubId: vhubuks.id
+    fwPolicyId: azFwPolicy.outputs.fwPolicyId
   }
 }
 
@@ -745,13 +793,10 @@ resource weVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(dep
       }
       routingConfiguration: {
         associatedRouteTable: {
-          id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', frcVhub.name, 'defaultRouteTable')
+          id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', weVhub.name, 'defaultRouteTable')
         }
         propagatedRouteTables: {
           ids: [
-            {
-              id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', weVhub.name, 'rtNva')
-            }
             {
               id: resourceId('Microsoft.Network/virtualHubs/hubRouteTables', weVhub.name, 'defaultRouteTable')
             }
