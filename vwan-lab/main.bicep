@@ -7,6 +7,9 @@ param deployErWe bool = false
 param deployErUks bool = false
 param deployVmNwExt bool = false
 
+// Whether to deploy ILB in front of frc-nva
+param deployFrcIlb bool = true
+
 // Deploy a second FRC vHub and ER GW
 param deployFrc2Vhub bool = false
 param deployFrcEr2 bool = false
@@ -17,14 +20,14 @@ param deployUsVhub bool = false
 
 // Deploy a secured hub in WE + VPN
 param deployWeSecuredHub bool = false
-param deployWeVpn bool = true
+param deployWeVpn bool = false
 
 // Make FRC and FRC2 and UKS secured
 param doFrcSecuredHub bool = false
 param doFrc2SecuredHub bool = false
 param doUksSecuredHub bool = false
 
-param mySourceIp string = '90.103.113.242'
+param mySourceIp string = '90.103.185.164'
 
 // ER Circuit
 @secure()
@@ -49,6 +52,7 @@ param adminPassword string
 var frcDefaultRouteTable = 'defaultRouteTable'
 var uksDefaultRouteTable = 'defaultRouteTable'
 var usDefaultRouteTable = 'defaultRouteTable'
+var weDefaultRouteTable = 'defaultRouteTable'
 
 // Deployment syntax
 // az deployment group create -n Deploy -g vwan-lab-0 
@@ -87,6 +91,37 @@ resource weVhub 'Microsoft.Network/virtualHubs@2020-08-01' = if (deployWeSecured
     virtualWan: {
       id: vwan.id
     }
+  }
+}
+
+resource weRtDefault 'Microsoft.Network/virtualHubs/hubRouteTables@2020-11-01' = {
+  name: '${weVhub.name}/${weDefaultRouteTable}'
+  dependsOn: [
+  ]
+  properties: {
+    labels: [
+      'default'
+    ]
+    routes: [
+      {
+        destinations: [
+          '192.168.12.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: frcVnet4Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toVnet7'
+      }
+      {
+        destinations: [
+          '192.168.13.0/24'
+        ]
+        destinationType: 'CIDR'
+        nextHop: frcVnet4Connection.id
+        nextHopType: 'ResourceId'
+        name: 'toVnet8'
+      }
+    ]
   }
 }
 
@@ -145,6 +180,11 @@ resource frc2Vhub 'Microsoft.Network/virtualHubs@2020-08-01' = if(deployFrc2Vhub
 
 resource frcRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
   name: '${frcVhub.name}/rtNva'
+  dependsOn: [
+    [
+      frcVnet4Connection
+    ]
+  ]
   properties: {
     routes: [
       {
@@ -424,6 +464,11 @@ module uksAzFw '../_modules/vhub-azfw.bicep' =  if (doUksSecuredHub) {
 
 resource uksRtNva 'Microsoft.Network/virtualHubs/hubRouteTables@2020-08-01' = {
   name: '${vhubuks.name}/rtNva'
+  dependsOn: [
+    [
+      uksVnet2Connection
+    ]
+  ]
   properties: {
     routes: [
     ]
@@ -981,6 +1026,26 @@ module usVnet10 'vnet.bicep' = if(deployUsVhub) {
   }
 }
 
+// TEST DTEK - PEERINGS //
+
+resource vnet3Vnet7Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: '${frcVnet3.name}/vnet3toVnet7'
+  properties: {
+    remoteVirtualNetwork: {
+      id: frcVnet7.outputs.vnetId
+    }
+  }
+}
+
+resource vnet7Vnet3Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
+  name: '${frcVnet7.name}/vnet7toVnet3'
+  properties: {
+    remoteVirtualNetwork: {
+      id: frcVnet3.outputs.vnetId
+    }
+  }
+}
+
 // FRC - PEERINGS //
 
 resource vnet4Vnet7Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
@@ -1250,7 +1315,7 @@ module frcVmNva2 '../_modules/vm.bicep' = {
   }
 }
 
-module frcIlbNva '../_modules/ilbHa.bicep' = {
+module frcIlbNva '../_modules/ilbHa.bicep' = if(deployFrcIlb) {
   name: 'frc-ilb-nva'
   params: {
     backendIp: frcVmNva.outputs.nicPrivateIp
@@ -1279,6 +1344,18 @@ module frcVmVnet7Nw '../_modules/nwext.bicep' = if(deployVmNwExt) {
     vmName: frcVmVnet7.name
   }
   
+}
+
+// // FRC - NON NVA VM IN FAR SPOKE0 PEERED TO NVA VNET
+module frcVmVnet8 '../_modules/vm.bicep' = {
+  name: 'frc-vm8'
+  params: {
+    location: frLocation
+    subnetId: frcVnet8.outputs.subnetId
+    vmName: 'frc-vm8'
+    enableForwarding: false
+    mySourceIp: mySourceIp
+  }
 }
 
 

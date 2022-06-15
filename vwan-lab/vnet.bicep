@@ -29,6 +29,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
         properties: routeTableId == 'non' ? nonRouteTable : union(nonRouteTable, routeTableVar)
       }
     ]
+    bgpCommunities: {
+      virtualNetworkCommunity: '12076:20010'
+    }
   }
 }
 

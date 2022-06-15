@@ -2,9 +2,9 @@
 param location string = 'francecentral'
 param drLocation string = 'eastus'
 
-param deployErMain bool = true
+param deployErMain bool = false
 param deployMainNva bool = false
-param deployMainVm bool = false
+param deployMainVm bool = true
 
 // DR site deployment
 param deployDrSite bool = false

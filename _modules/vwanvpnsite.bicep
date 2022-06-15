@@ -52,6 +52,14 @@ resource vpnSitesLink 'Microsoft.Network/vpnGateways/vpnConnections@2021-03-01' 
         }
       }
     ]
+    routingConfiguration: {
+      propagatedRouteTables: {
+        labels:[
+          'nva'
+          'default'
+        ]
+      }
+    }
     remoteVpnSite: {
       id: vpnSite.id
     }

@@ -64,22 +64,22 @@ resource slb 'Microsoft.Network/loadBalancers@2021-05-01' = {
         }
       }
     ]
-    inboundNatRules: [
-      {
-        name: 'tcp22'
-        properties: {
-          backendAddressPool: {
-            id: resourceId('Microsoft.Network/loadBalancers/backendPools', lbName, 'bePool0')
-          }
-          backendPort: 22
-          frontendPort: 22
-          frontendIPConfiguration: {
-            id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'ipConfig0')
-          }
-          protocol: 'Tcp'
-        }
-      }
-    ]
+    // inboundNatRules: [
+    //   {
+    //     name: 'tcp22'
+    //     properties: {
+    //       backendAddressPool: {
+    //         id: resourceId('Microsoft.Network/loadBalancers/backendAddressPools', lbName, 'bePool0')
+    //       }
+    //       backendPort: 22
+    //       frontendPort: 22
+    //       frontendIPConfiguration: {
+    //         id: resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', lbName, 'ipConfig0')
+    //       }
+    //       protocol: 'Tcp'
+    //     }
+    //   }
+    // ]
     probes: [
       {
         properties: {
