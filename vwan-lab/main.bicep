@@ -852,7 +852,7 @@ resource weVhubErGw 'Microsoft.Network/expressRouteGateways@2020-08-01' = if(dep
   }
 }
 
-module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = if(deployFrcVpn) {
+module frcVhubVpnGw '../_modules/vwanvpngwha.bicep' = if(deployFrcVpn) {
   name: 'gw-frc-vpn'
   params: {
     asn: 65515
@@ -862,7 +862,7 @@ module frcVhubVpnGw '../_modules/vwanvpngw.bicep' = if(deployFrcVpn) {
   }
 }
 
-module weVhubVpnGw '../_modules/vwanvpngw.bicep' = if(deployWeVpn) {
+module weVhubVpnGw '../_modules/vwanvpngwha.bicep' = if(deployWeVpn) {
   name: 'gw-we-vpn'
   params: {
     asn: 65515

@@ -255,7 +255,7 @@ resource onPremVnet 'Microsoft.Network/virtualNetworks@2020-11-01' = if(simulate
   }
 }
 
-module vpnGw 'vpngw.bicep' = if(simulateOnPremLocation) {
+module vpnGw 'vpngwha.bicep' = if(simulateOnPremLocation) {
   name: 'vpngw'
   params: {
     gwSubnetId: onPremVnet.properties.subnets[0].id

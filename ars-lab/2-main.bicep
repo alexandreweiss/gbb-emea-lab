@@ -31,7 +31,7 @@ module hub '../_modules/vnetMultiSubnets.bicep' = {
   }
 }
 
-module vpnGw '../_modules/vpngw.bicep' = {
+module vpnGw '../_modules/vpngwha.bicep' = {
   name: 'vpnGw'
   dependsOn: [
     routeServer

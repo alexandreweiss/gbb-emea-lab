@@ -37,7 +37,7 @@ module spoke1 '../_modules/vnet.bicep' = {
   }
 }
 
-module vpnGw '../_modules/vpngw.bicep' = {
+module vpnGw '../_modules/vpngwha.bicep' = {
   name: 'vpnGw'
   params: {
     asn: 65515
