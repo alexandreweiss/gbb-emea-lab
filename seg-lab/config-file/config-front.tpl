@@ -26,6 +26,6 @@ write_files:
       1.0.1.4 middle.local
 runcmd:
   - ln -s /etc/nginx/sites-available/rp.conf /etc/nginx/sites-enabled/rp.conf
-  - rm -rf /etc/ngnix/sites-enabled/default
+  - rm -rf /etc/nginx/sites-enabled/default
   - systemctl enable --now nginx
   - systemctl restart nginx
