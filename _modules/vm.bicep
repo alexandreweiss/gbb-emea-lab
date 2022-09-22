@@ -32,9 +32,9 @@ param osType string = 'server'
 // }
 
 var osServer = {
-  offer: 'UbuntuServer'
-  publisher: 'Canonical'
-  sku: '18.04-LTS'
+  offer: '0001-com-ubuntu-server-jammy'
+  publisher: 'canonical'
+  sku: '22_04-lts-gen2'
   version: 'latest'
 }
 

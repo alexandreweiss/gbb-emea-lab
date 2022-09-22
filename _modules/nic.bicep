@@ -96,7 +96,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
         }
       }
       {
-        name: 'allow-http-afd'
+        name: 'allow-http'
         properties: {
           access:'Allow'
           description:'Allow probe from afd backend'
@@ -105,7 +105,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-11-01' = if(createPub
           direction:'Inbound'
           protocol:'Tcp'
           priority: 210
-          sourceAddressPrefix: 'AzureFrontDoor.Backend'
+          sourceAddressPrefix: mySourceIp
           sourcePortRange: '*'
         }
       }
