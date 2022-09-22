@@ -1,6 +1,7 @@
 #cloud-config
 packages:
   - nginx
+write_files:
   - append: true
     path: /etc/nginx/sites-available/rp.conf
     content: |
