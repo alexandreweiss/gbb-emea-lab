@@ -10,34 +10,41 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
 }
 
 module vnet '../_modules/vnetMultiSubnets.bicep' = {
-  name: 'vpn-vn'
+  name: 'azure-region1-vng'
   scope: rg
   params: {
-    vnetName: 'vpn-vn'
+    vnetName: 'azure-region1-vng'
     location: location
-    addressSpace: '192.168.19.0/24'
+    addressSpace: '10.2.5.0/24'
     subnets: [
       {
         name: 'GatewaySubnet'
-        addressPrefix: '192.168.19.0/27'
+        addressPrefix: '10.2.5.0/27'
+        delegations: []
       }
       {
-        name: 'default'
-        addressPrefix: '192.168.19.32/27'
+        name: 'AviatrixGateway'
+        addressPrefix: '10.2.5.128/28'
+        delegations: []
+      }
+      {
+        name: 'VM'
+        addressPrefix: '10.2.5.144/28'
+        delegations: []
       }
     ]
   }
 }
 
-// module vpnGw '../_modules/vpngwsingle.bicep' = {
-//   scope: rg
-//   name: 'vpnGw'
-//   params: {
-//     asn: 64810
-//     gwSubnetId: vnet.outputs.subnets[0].id
-//     location: location
-//   }
-// }
+module vpnGw '../_modules/vpngwsingle.bicep' = {
+  scope: rg
+  name: 'vpnGw'
+  params: {
+    asn: 64810
+    gwSubnetId: vnet.outputs.subnets[0].id
+    location: location
+  }
+}
 
 module vpnVm '../_modules/vm.bicep' = {
   scope: rg

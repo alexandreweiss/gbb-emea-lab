@@ -4,24 +4,82 @@
 
 param location string = 'westeurope'
 
-module hub '../_modules/vnet.bicep' = {
+module hub '../_modules/vnetMultiSubnets.bicep' = {
   name: 'hub'
   params: {
-    addressPrefix: '10.0.0.0/28'
-    addressSpace: '10.0.0.0/24'
-    location: location
     vnetName: 'hub'
-    networkPoliciesState: 'Disabled'
+    location: location
+    addressSpace: '10.0.0.0/24'
+    subnets: [
+      {
+        name: 'default'
+        addressPrefix: '10.0.0.0/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth0Mgt'
+        addressPrefix: '10.0.0.16/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth1'
+        addressPrefix: '10.0.0.32/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth0Mgt-hagw'
+        addressPrefix: '10.0.0.64/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth1-hagw'
+        addressPrefix: '10.0.0.80/28'
+        delegations: []
+      }
+      {
+        name: 'InboundDnsResolver'
+        addressPrefix: '10.0.0.96/28'
+        delegations: [
+          {
+            name: 'DnsResolver'
+            properties: {
+              serviceName:'Microsoft.Network/DnsResolvers'
+            }
+          }
+        ]
+      }
+    ]
   }
 }
 
-module spoke '../_modules/vnet.bicep' = {
+module spoke '../_modules/vnetMultiSubnets.bicep' = {
   name: 'spoke'
   params: {
-    addressPrefix: '10.0.1.0/28'
-    addressSpace: '10.0.1.0/24'
-    location: location
     vnetName: 'spoke'
+    location: location
+    addressSpace: '10.0.1.0/24'
+    subnets: [
+      {
+        name: 'default'
+        addressPrefix: '10.0.1.0/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth0Mgt'
+        addressPrefix: '10.0.1.16/28'
+        delegations: []
+      }
+      {
+        name: 'GatewayEth0Mgt-hagw'
+        addressPrefix: '10.0.1.32/28'
+        delegations: []
+      }
+      {
+        name: 'privateEndpoints'
+        addressPrefix: '10.0.1.48/28'
+        delegations: []
+      }
+    ]
   }
 }
 
@@ -32,13 +90,12 @@ module pl '../_modules/vnet.bicep' = {
     addressSpace: '10.0.2.0/24'
     location: location
     vnetName: 'pl'
-    networkPoliciesState: 'Disabled'
+    networkPoliciesState: 'Enabled'
   }
 }
 
 resource peeringHubSpoke 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2021-02-01' = {
   name: '${hub.name}/hubToSpoke'
-  parent: hub
   properties: {
     remoteVirtualNetwork: {
       id: spoke.outputs.vnetId
@@ -48,7 +105,6 @@ resource peeringHubSpoke 'Microsoft.Network/virtualNetworks/virtualNetworkPeerin
 
 resource peeringSpokeHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2021-02-01' = {
   name: '${spoke.name}/spokeToHub'
-  parent: spoke
   properties: {
     remoteVirtualNetwork: {
       id: hub.outputs.vnetId
@@ -58,7 +114,6 @@ resource peeringSpokeHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerin
 
 resource peeringHubPl 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2021-02-01' = {
   name: '${hub.name}/hubToPl'
-  parent: hub
   properties: {
     remoteVirtualNetwork: {
       id: pl.outputs.vnetId
@@ -68,7 +123,6 @@ resource peeringHubPl 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@
 
 resource peeringPlHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2021-02-01' = {
   name: '${pl.name}/plToHub'
-  parent: pl
   properties: {
     remoteVirtualNetwork: {
       id: hub.outputs.vnetId
@@ -83,10 +137,10 @@ module sa '../_modules/storageaccount.bicep' = {
     peeringPlHub
     peeringSpokeHub
   ]
-  name: 'sapl001'
+  name: 'sapl002'
   params: {
     location: location
-    name: 'sapl001'
+    name: 'sapl002'
   }
 }
 
@@ -116,7 +170,7 @@ resource pe2Sa 'Microsoft.Network/privateEndpoints@2021-02-01' = {
   location: location
   properties: {
     subnet: {
-      id: hub.outputs.subnetId
+      id: hub.outputs.subnets[0].id
     }
     privateLinkServiceConnections: [
       {
@@ -132,11 +186,46 @@ resource pe2Sa 'Microsoft.Network/privateEndpoints@2021-02-01' = {
   }
 }
 
+resource peSaSpoke 'Microsoft.Network/privateEndpoints@2021-02-01' = {
+  name: 'pesapl003'
+  location: location
+  properties: {
+    subnet: {
+      id: spoke.outputs.subnets[3].id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'pesapl001'
+        properties: {
+          privateLinkServiceId: sa.outputs.id
+          groupIds: [
+            'blob'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource peSaSpokeDnsRecord 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2022-01-01' = {
+  name: '${peSaSpoke.name}/peDnsGroup'
+   properties: {
+     privateDnsZoneConfigs: [
+       {
+         name: 'primary'
+         properties: {
+          privateDnsZoneId: privateDnsZone.id
+         }
+       }
+     ]
+   }
+}
+
 module spokeVm '../_modules/vm.bicep' = {
   name: 'spokeVm'
   params: {
     location: location
-    subnetId: spoke.outputs.subnetId
+    subnetId: spoke.outputs.subnets[0].id
     vmName: 'spokeVm'
   }
 }
@@ -154,8 +243,51 @@ module hubVm '../_modules/vm.bicep' = {
   name: 'hubVm'
   params: {
     location: location
-    subnetId: hub.outputs.subnetId
+    subnetId: hub.outputs.subnets[0].id
     vmName: 'hubVm'
     
   }
 }
+
+// PRIVATE DNS RESOLVER
+
+resource dnsResolver 'Microsoft.Network/dnsResolvers@2020-04-01-preview' = {
+  name: 'dnsResolverWe'
+  location: location
+  properties: {
+    virtualNetwork: {
+      id: hub.outputs.vnetId
+    }
+  }
+}
+
+resource dnsInbound 'Microsoft.Network/dnsResolvers/inboundEndpoints@2020-04-01-preview' = {
+  name: '${dnsResolver.name}/dnsInbound'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        subnet: {
+          id: hub.outputs.subnets[5].id
+        }
+      }
+    ]
+  }
+}
+
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.blob.core.windows.net'
+  location: 'global'
+}
+
+resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: '${privateDnsZone.name}/toHub'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+   virtualNetwork: {
+    id: hub.outputs.vnetId
+   } 
+  }
+}
+

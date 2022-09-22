@@ -16,3 +16,5 @@ Placing a PE of a storage account in a spoke (pl vnet) will not make it availabl
 ## Diagram
 
 ![Lab schema](/images/pl-lab-schema.png)
+
+![Lab schema](/images/pl-lab-schema-2.png)
