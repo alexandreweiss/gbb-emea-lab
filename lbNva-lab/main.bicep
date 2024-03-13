@@ -1,4 +1,4 @@
-param location string = 'westeurope'
+param location string = 'francecentral'
 
 // Admin
 
@@ -9,7 +9,6 @@ module bastion '../_modules/bastion.bicep' = {
     name: 'bastion'
     subnetId: nvaVnet.outputs.subnets[2].id
   }
-  
 }
 
 // Networking
@@ -53,6 +52,10 @@ module nvaVnet './_modules/vnetMultiSubnets.bicep' = {
         name: 'admin'
         addressPrefix: '10.0.1.64/28'
       }
+      {
+        name: 'AzureFirewallSubnet'
+        addressPrefix: '10.0.1.128/26'
+      }
     ]
     vnetName: 'nvaVnet'
   }
@@ -90,13 +93,12 @@ resource appRt 'Microsoft.Network/routeTables@2021-02-01' = {
         properties: {
           nextHopType: 'VirtualAppliance'
           addressPrefix: '10.0.0.0/16'
-          nextHopIpAddress: lb.outputs.appFrontEndIp
+          nextHopIpAddress: azFw.properties.ipConfigurations[0].properties.privateIPAddress
         }
       }
     ]
   }
 }
-
 
 resource frontRt 'Microsoft.Network/routeTables@2021-02-01' = {
   name: 'frontRt'
@@ -108,7 +110,7 @@ resource frontRt 'Microsoft.Network/routeTables@2021-02-01' = {
         properties: {
           nextHopType: 'VirtualAppliance'
           addressPrefix: '10.0.0.0/16'
-          nextHopIpAddress: lb.outputs.frontFrontEndIp
+          nextHopIpAddress: azFw.properties.ipConfigurations[0].properties.privateIPAddress
         }
       }
     ]
@@ -118,7 +120,7 @@ resource frontRt 'Microsoft.Network/routeTables@2021-02-01' = {
 // Peerings relationships
 resource nvaClientPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${nvaVnet.name}/nvaToClient'
-  parent: nvaVnet
+  //parent: nvaVnet
   properties: {
     remoteVirtualNetwork: {
       id: clientVnet.outputs.vnetId
@@ -128,7 +130,7 @@ resource nvaClientPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeeri
 
 resource clientNvaPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${clientVnet.name}/clientToNva'
-  parent: clientVnet
+  //parent: clientVnet
   properties: {
     remoteVirtualNetwork: {
       id: nvaVnet.outputs.vnetId
@@ -139,7 +141,7 @@ resource clientNvaPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeeri
 
 resource nvaAppPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${nvaVnet.name}/nvaToApp'
-  parent: nvaVnet
+  //parent: nvaVnet
   properties: {
     remoteVirtualNetwork: {
       id: appVnet.outputs.vnetId
@@ -149,7 +151,7 @@ resource nvaAppPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings
 
 resource appNvaPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2020-08-01' = {
   name: '${appVnet.name}/appToNva'
-  parent: appVnet
+  //parent: appVnet
   properties: {
     remoteVirtualNetwork: {
       id: nvaVnet.outputs.vnetId
@@ -165,7 +167,6 @@ module appVm0 '../_modules/vm.bicep' = {
     location: location
     subnetId: appVnet.outputs.subnets[0].id
     vmName: 'appVm0'
-    
   }
 }
 
@@ -179,51 +180,128 @@ module clientVm0 '../_modules/vm.bicep' = {
 }
 
 // NVA and LB
-module nvaVm0 './_modules/vm2nics.bicep' = {
-  name: 'nvaVm0'
-  params: {
-    location: location
-    nic0SubnetId: nvaVnet.outputs.subnets[0].id
-    nic1SubnetId: nvaVnet.outputs.subnets[1].id
-    enableForwarding: true
-    enableCloudInit: false
-    vmName: 'nvaVm0'
-    nic0BackendPoolId: lb.outputs.backendPools[0].id
-    nic1BackendPoolId: lb.outputs.backendPools[1].id
+// module nvaVm0 './_modules/vm2nics.bicep' = {
+//   name: 'nvaVm0'
+//   params: {
+//     location: location
+//     nic0SubnetId: nvaVnet.outputs.subnets[0].id
+//     nic1SubnetId: nvaVnet.outputs.subnets[1].id
+//     enableForwarding: true
+//     enableCloudInit: false
+//     vmName: 'nvaVm0'
+//     nic0BackendPoolId: lb.outputs.backendPools[0].id
+//     nic1BackendPoolId: lb.outputs.backendPools[1].id
+//   }
+// }
+
+// module nvaVm1 './_modules/vm2nics.bicep' = {
+//   name: 'nvaVm1'
+//   params: {
+//     location: location
+//     nic0SubnetId: nvaVnet.outputs.subnets[0].id
+//     nic1SubnetId: nvaVnet.outputs.subnets[1].id
+//     enableForwarding: true
+//     enableCloudInit: false
+//     vmName: 'nvaVm1'
+//     nic0BackendPoolId: lb.outputs.backendPools[0].id
+//     nic1BackendPoolId: lb.outputs.backendPools[1].id
+//   }
+// }
+
+// module lb './_modules/lb4nva.bicep' = {
+//   name: 'ilb'
+//   params: {
+//     lbConfig: [
+//       {
+//         name: 'front'
+//         subnetId: nvaVnet.outputs.subnets[0].id
+//       }
+//       {
+//         name: 'app'
+//         subnetId: nvaVnet.outputs.subnets[1].id
+//       }
+//     ]
+//     lbName: 'ilb'
+//     location: location
+//     frontSubnetId: nvaVnet.outputs.subnets[0].id
+//     appSubnetId: nvaVnet.outputs.subnets[1].id
+//   }
+// }
+
+resource fwPublicIp 'Microsoft.Network/publicIPAddresses@2021-02-01' = {
+  name: 'az-firewall-pip'
+  location: location
+  properties: {
+    publicIPAllocationMethod: 'Static'
+  }
+  sku: {
+    name: 'Standard'
   }
 }
 
-module nvaVm1 './_modules/vm2nics.bicep' = {
-  name: 'nvaVm1'
-  params: {
-    location: location
-    nic0SubnetId: nvaVnet.outputs.subnets[0].id
-    nic1SubnetId: nvaVnet.outputs.subnets[1].id
-    enableForwarding: true
-    enableCloudInit: false
-    vmName: 'nvaVm1'
-    nic0BackendPoolId: lb.outputs.backendPools[0].id
-    nic1BackendPoolId: lb.outputs.backendPools[1].id
-  }
-}
-
-module lb './_modules/lb4nva.bicep' = {
-  name: 'ilb'
-  params: {
-    lbConfig: [
+resource azFw 'Microsoft.Network/azureFirewalls@2021-02-01' = {
+  name: 'azFw'
+  location: location
+  properties: {
+    ipConfigurations: [
       {
-        name: 'front'
-        subnetId: nvaVnet.outputs.subnets[0].id
-      }
-      {
-        name: 'app'
-        subnetId: nvaVnet.outputs.subnets[1].id
+        name: 'azFwIpConfig'
+        properties: {
+          publicIPAddress: {
+            id: fwPublicIp.id
+          }
+          subnet: {
+            id: nvaVnet.outputs.subnets[4].id
+          }
+        }
       }
     ]
-    lbName: 'ilb'
-    location: location
-    frontSubnetId: nvaVnet.outputs.subnets[0].id
-    appSubnetId: nvaVnet.outputs.subnets[1].id
+    firewallPolicy: {
+      id: fwPolicy.id
+    }
   }
 }
 
+resource fwPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' = {
+  name: 'azFwPolicy'
+  location: location
+  properties: {
+    threatIntelMode: 'Alert'
+  }
+}
+
+resource azFwRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01' = {
+  name: 'azFwRuleCollectionGroup'
+  parent: fwPolicy
+  properties: {
+    priority: 100
+    ruleCollections: [
+      {
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        action: {
+          type: 'Allow'
+        }
+        name: 'Global-rules'
+        priority: 200
+        rules: [
+          {
+            ruleType: 'NetworkRule'
+            name: 'any'
+            ipProtocols: [
+              'Any'
+            ]
+            destinationAddresses: [
+              '*'
+            ]
+            destinationPorts: [
+              '*'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
